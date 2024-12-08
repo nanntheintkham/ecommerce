@@ -87,7 +87,10 @@ def shipped_dash(request):
         messages.error(request, 'Unauthorized access. Please login as a superuser.')
         return redirect('home')
 
+
 def process_order(request):
+    print(request.session.items())
+
     if request.POST:
         cart = Cart(request)
         cart_products = cart.get_prods
@@ -97,6 +100,9 @@ def process_order(request):
         payment_form = PaymentForm(request.POST or None)
         # Get shipping data
         shipping_data = request.session.get('shipping_data')
+        if not shipping_data:
+            messages.error(request, "Access denied! Missing shipping data.")
+            return redirect('home')
         
         # Get Order info
         full_name = shipping_data['shipping_fullname']

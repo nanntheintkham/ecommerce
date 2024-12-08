@@ -89,9 +89,7 @@ def shipped_dash(request):
 
 
 def process_order(request):
-    print(request.session.items())
-
-    if request.POST:
+    # if request.POST:
         cart = Cart(request)
         cart_products = cart.get_prods
         quantities = cart.get_quants
@@ -100,9 +98,6 @@ def process_order(request):
         payment_form = PaymentForm(request.POST or None)
         # Get shipping data
         shipping_data = request.session.get('shipping_data')
-        if not shipping_data:
-            messages.error(request, "Access denied! Missing shipping data.")
-            return redirect('home')
         
         # Get Order info
         full_name = shipping_data['shipping_fullname']
@@ -167,9 +162,9 @@ def process_order(request):
         messages.success(request, "Your order has been placed!")
         return redirect('home')
 
-    else:
-        messages.error(request, "Access denied!")
-        return redirect('home')
+    # else:
+    #     messages.error(request, "Access denied!")
+    #     return redirect('home')
 
 
 def billing_info(request):
@@ -192,9 +187,9 @@ def billing_info(request):
             'no_shipping': True,
             'invoice': str(uuid.uuid4()),
             'currency_code': 'HUF',
-            'notify_url': 'https://{}{}'.format(host, reverse('paypal-ipn')),
-            'return_url': 'https://{}{}'.format(host, reverse('process_order')),
-            'cancel_return': 'https://{}{}'.format(host, reverse('payment_failed')),
+            'notify_url': 'https://{}{}'.format(host, reverse("paypal-ipn")),
+            'return_url': 'https://{}{}'.format(host, reverse("process_order")),
+            'cancel_return': 'https://{}{}'.format(host, reverse("payment_failed")),
             
         }
 

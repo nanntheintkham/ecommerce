@@ -89,7 +89,7 @@ def shipped_dash(request):
 
 
 def process_order(request):
-    # if request.POST:
+    if request.POST:
         cart = Cart(request)
         cart_products = cart.get_prods
         quantities = cart.get_quants
@@ -162,9 +162,9 @@ def process_order(request):
         messages.success(request, "Your order has been placed!")
         return redirect('home')
 
-    # else:
-    #     messages.error(request, "Access denied!")
-    #     return redirect('home')
+    else:
+        messages.error(request, "Access denied!")
+        return redirect('home')
 
 
 def billing_info(request):
@@ -198,7 +198,7 @@ def billing_info(request):
         if request.user.is_authenticated:
 			# Get The Billing Form
             billing_form = PaymentForm()
-            return render(request, "payment/billing_info.html", {"paypal_form":paypal_form, "cart_products":cart_products, "quantities":quantities, "totals":totals, "shipping_info":shipping_data, "billing_info":billing_form})
+            return render(request, "payment/billing_info.html", {"paypal_form":paypal_form, "cart_products":cart_products, "quantities":quantities, "totals":totals, "shipping_info":request.POST, "billing_info":billing_form})
 
         else:
 			# Not logged in

@@ -10,5 +10,5 @@ urlpatterns = [
     path('shipped_dash/', views.shipped_dash, name='shipped_dash'),
     path('processing_dash/', views.processing_dash, name='processing_dash'),
     path('orders/<int:pk>', views.orders, name='orders'),
-    path('paypal', include("paypal.standard.ipn.urls")),
+    path('paypal/', include("paypal.standard.ipn.urls")),
 ]

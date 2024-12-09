@@ -184,11 +184,11 @@ def billing_info(request):
             'business': settings.PAYPAL_RECEIVER_EMAIL,
             'amount': totals,
             'item_name': 'Shopping Cart',
-            'no_shipping': True,
+            'no_shipping': '2',
             'invoice': str(uuid.uuid4()),
             'currency_code': 'HUF',
             'notify_url': 'https://{}{}'.format(host, reverse("paypal-ipn")),
-            'return_url': 'https://{}{}'.format(host, reverse("process_order")),
+            'return_url': 'https://{}{}'.format(host, reverse("payment_success")),
             'cancel_return': 'https://{}{}'.format(host, reverse("payment_failed")),
             
         }

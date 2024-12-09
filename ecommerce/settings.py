@@ -6,7 +6,11 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables
-# load_dotenv()
+load_dotenv()
+
+# DB Password
+# MY_DB_PASSWORD = os.environ['MY_DB_PASSWORD']
+MY_DB_PASSWORD = os.environ.get('MY_DB_PASSWORD')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -16,8 +20,8 @@ SECRET_KEY = 'django-insecure-3_vyq10@%=g2*pi0^5s_tdu6tfs5a!dlensj*xewnrmh@h_v2f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ecommerce-production-97c1.up.railway.app', 'https://ecommerce-production-97c1.up.railway.app', '127.0.0.1']
-CSRF_TRUSTED_ORIGINS = ['https://ecommerce-production-97c1.up.railway.app']
+ALLOWED_HOSTS = ['ecommerce-production-97c1.up.railway.app', 'https://ecommerce-production-97c1.up.railway.app', 'localhost', 'fdde-2a00-1110-211-c572-d5f0-8d3b-43fd-5d77.ngrok-free.app']
+CSRF_TRUSTED_ORIGINS = ['https://ecommerce-production-97c1.up.railway.app', 'https://fdde-2a00-1110-211-c572-d5f0-8d3b-43fd-5d77.ngrok-free.app/']
 
 
 # Application definition
@@ -78,7 +82,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'railway',
         'USER': 'postgres',
-        'PASSWORD': os.environ['MY_DB_PASSWORD'],
+        'PASSWORD': MY_DB_PASSWORD,
         'HOST': 'autorack.proxy.rlwy.net',
         'PORT': '19675',
     }

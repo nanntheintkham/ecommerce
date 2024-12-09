@@ -9,8 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 # DB Password
-# MY_DB_PASSWORD = os.environ['MY_DB_PASSWORD']
-MY_DB_PASSWORD = os.environ.get('MY_DB_PASSWORD')
+MY_DB_PASSWORD = os.environ['MY_DB_PASSWORD']
+# MY_DB_PASSWORD = os.environ.get('MY_DB_PASSWORD')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

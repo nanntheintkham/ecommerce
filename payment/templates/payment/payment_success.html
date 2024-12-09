@@ -1,1 +1,34 @@
-<h1>Success</h1>
+{% extends 'store/base.html' %}
+
+{% block content %}
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Payment Success!</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Your order is complete</p>
+        </div>
+    </div>
+</header>
+<br />
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <br /><br />
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Payment Successful!</h5>
+                            <p class="card-text">Thank you for your purchase!</p>
+
+
+                        </div>
+                    </div>
+                    <br /><br /><br />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

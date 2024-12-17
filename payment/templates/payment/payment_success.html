@@ -21,8 +21,22 @@
                         <div class="card-body">
                             <h5 class="card-title">Payment Successful!</h5>
                             <p class="card-text">Thank you for your purchase!</p>
-
-
+                            {% if order %}
+                                
+                                <p>Your order has been placed successfully.</p>
+                                <p class="card-text">
+                                <strong>Total Amount Paid:</strong> {{ order.amount_paid }} HUF
+                                </p>
+                            
+                            {% else %}
+                                {% if stream_url %}
+                                    <p>Access your product here:</p>
+                                    <a href="{% url 'view_digital_product' product.pk %}" class="btn btn-primary">View Product</a>
+                                {% else %}
+                                    <p>No order details found.</p>
+                                    <p class="card-text">We couldn't retrieve your order details.</p>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                     <br /><br /><br />

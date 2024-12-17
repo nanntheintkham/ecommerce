@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from .models import Product, Category, Profile
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -6,9 +6,12 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
 from django import forms
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
+from .models import UserDigitalPurchase
 from payment.forms import ShippingAddressForm
-from payment.models import ShippingAddress
+from payment.models import ShippingAddress, Order, OrderItem
 from cart.cart import Cart
 import logging
 import json
@@ -107,8 +110,56 @@ def category(request, slug):
 
 
 def product(request, pk):
-    product = Product.objects.get(pk=pk)
-    return render(request,'store/product.html', {'product': product})
+    """
+    Show product details based on type.
+    """
+    product = get_object_or_404(Product, pk=pk)
+
+    if product.product_type == 'digital':
+        # Check if user has purchased this digital product
+        purchased = False
+        if request.user.is_authenticated:
+            purchased = UserDigitalPurchase.objects.filter(
+            user=request.user, 
+            digital_product=product
+        ).exists()
+    
+        return render(request, 'store/digital_product_detail.html', {
+            'product': product,
+            'purchased': purchased
+        })
+        
+    return render(request,'store/product.html', {'product': product})    
+    
+
+@login_required
+def view_digital_product(request, pk):
+    """
+    View a purchased digital product
+    """
+    digital_product = get_object_or_404(Product, pk=pk, product_type='digital')
+    
+    # Check if user has purchased the product
+    purchase = UserDigitalPurchase.objects.filter(
+        user=request.user, 
+        digital_product=digital_product
+    ).first()
+    
+    if not purchase:
+        messages.warning(request, "You must purchase this product first.")
+        return redirect('product', pk=digital_product.pk)
+    
+    # Generate pre-signed URL
+    stream_url = digital_product.get_presigned_url()
+    print(stream_url)
+    # Update last viewed timestamp
+    purchase.last_viewed = timezone.now()
+    purchase.save()
+    
+    return render(request, 'store/view_digital_product.html', {
+        'product': digital_product,
+        'stream_url': stream_url
+    })
 
 def home(request):
     products = Product.objects.all()

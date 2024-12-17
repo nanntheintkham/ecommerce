@@ -1,13 +1,14 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User
 from cart.cart import Cart
 from .forms import ShippingAddressForm, PaymentForm
 from .models import ShippingAddress, Order, OrderItem
-from store.models import Product, Profile
+from store.models import Product, Profile, UserDigitalPurchase
 from django.urls import reverse
 from paypal.standard.forms import PayPalPaymentsForm
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 import uuid
 import datetime
 
@@ -118,16 +119,21 @@ def process_order(request):
             order_id = create_order.pk
             # Get product information
             for product in cart_products():
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
+                 # Handle digital products
+                if product.product_type == 'digital':
+                    UserDigitalPurchase.objects.get_or_create(user=user, digital_product=product)
+
                 else:
-                    price = product.price
+                    product_id = product.id
+                    if product.is_sale:
+                        price = product.sale_price
+                    else:
+                        price = product.price
                 
-                for key, value in quantities().items():
-                    if int(key) == product_id:
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
-                        create_order_item.save()
+                    for key, value in quantities().items():
+                        if int(key) == product_id:
+                            create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
+                            create_order_item.save()
 
             clear_cart(request)
             # Delete Cart from db
@@ -286,9 +292,52 @@ def checkout(request):
         shipping_form = ShippingAddressForm(request.POST or None)
         return render(request, 'payment/checkout.html', {"cart_products": cart_products, "quantities": quantities, "totals": totals, "shipping_form": shipping_form})
 
+@login_required
+def purchase_digital_product(request, pk):
+    """
+    Handle digital product purchases directly.
+    """
+    product = get_object_or_404(Product, pk=pk, product_type='digital')
+    host = request.get_host()
+
+    paypal_dict = {
+        'business': 'your-paypal-email@example.com',
+        'amount': product.price,
+        'item_name': product.name,
+        'currency_code': 'HUF',
+        'notify_url': f'https://{host}{reverse("paypal-ipn")}',
+        'return_url': f'https://{host}{reverse("payment_success")}?product_id={product.id}',
+        'cancel_return': f'https://{host}{reverse("payment_failed")}',
+    }
+
+    form = PayPalPaymentsForm(initial=paypal_dict)
+    return render(request, 'purchase_digital_product.html', {'product': product, 'form': form})
+
 def payment_success(request):
     clear_cart(request)
-    return render(request, 'payment/payment_success.html', {})
+
+    # Fetch the most recent order of the logged-in user
+    if request.user.is_authenticated:
+        order = Order.objects.filter(user=request.user).last()
+        
+        if order and hasattr(order, 'orderitem_set'):  # Check for associated items
+            # Get the first product related to the order
+            first_item = order.orderitem_set.first()
+
+            if first_item and first_item.product.product_type == 'digital':
+                product = first_item.product
+                UserDigitalPurchase.objects.get_or_create(user=request.user, digital_product=product)
+                stream_url = product.get_presigned_url()
+
+                return render(request, 'payment/payment_success.html', {
+                    'product': product,
+                    'stream_url': stream_url
+                })
+        return render(request, 'payment/payment_success.html', {'order': order})
+    else:
+        # For guest users or fallback
+        order = None
+    return render(request, 'payment/payment_success.html', {'order': order})
 
 def payment_failed(request):
     return render(request, 'payment/payment_failed.html', {})

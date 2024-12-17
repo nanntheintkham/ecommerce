@@ -1,0 +1,31 @@
+{% extends 'store/base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ product.name }}</h1>
+    
+    <div class="video-container">
+        <video id="streamPlayer" controls width="100%">
+            <source src="{{ stream_url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <div class="product-description mt-4">
+        <h2>Description</h2>
+        <p>{{ product.description }}</p>
+    </div>
+
+    <script>
+        // Prevent video download
+        document.getElementById('streamPlayer').addEventListener('contextmenu', function(e) {
+            e.preventDefault(); // Disable right-click
+        });
+
+        // Prevent direct download
+        document.getElementById('streamPlayer').addEventListener('dragstart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</div>
+{% endblock %}

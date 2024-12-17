@@ -1,0 +1,49 @@
+{% extends 'store/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            
+            <img src="{{ product.image.url }}" class="img-fluid rounded-start" alt="...">
+            
+        </div>
+        <div class="col-md-6">
+            <h1>{{ product.name }}</h1>
+            <p>{{ product.description }}</p>
+            <p>Price: {{ product.price }} HUF</p>
+            
+            {% if user.is_authenticated %}
+                {% if purchased %}
+                <a href="{% url 'view_digital_product' product.pk %}" class="btn btn-success">View Product</a>
+                {% else %}
+                <button type="button" value="{{ product.id }}" class="btn btn-secondary" id="add-cart">Add To Cart</button>
+                {% endif %}
+            {% else %}
+            <p>Please <a href="{% url 'login' %}">log in</a> to purchase this digital product.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).on('click', '#add-cart', function(e){
+    e.preventDefault();
+    $.ajax({
+      type: 'POST',
+      url: '{% url 'cart_add' %}',
+      data: {
+        product_id: $('#add-cart').val(),
+        csrfmiddlewaretoken: '{{ csrf_token }}',
+        product_qty: '1',
+        action: 'post'
+        },
+
+        error: function(xhr, errmsg, err){
+          console.log(xhr.status + ": " + xhr.responseText);
+        }
+    });
+  })
+</script>
+{% endblock %}
+

@@ -3,50 +3,75 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Your premium eCommerce destination" />
     <title>Euphoria Ecommerce</title>
+    
     <!-- Favicon-->
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="{% static 'assets/favicon.ico' %}"
-    />
+    <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}" />
     <!-- Bootstrap icons-->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
     <!-- Core theme CSS (includes Bootstrap)-->
     <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-  </head>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
   <body>
     {% include 'store/navbar.html' %}
 
+    <!-- Messages -->
     {% if messages %}
-      {% for message in messages %}
+    <div class="container mt-5 pt-4">
+        {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-      {% endfor %}
+        {% endfor %}
+    </div>
     {% endif %}
 
-    {% block content %}
-    {% endblock content %}
+    <!-- Main Content -->
+    <main class="py-5">
+        {% block content %}
+        {% endblock content %}
+    </main>
 
-    <!-- Footer-->
-    <footer class="py-5 bg-dark">
-      <div class="container">
-        <p class="m-0 text-center text-white">Copyright &copy; Euphoria 2024</p>
-      </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h5>About Euphoria</h5>
+                    <p class="text-muted">Your premium shopping destination for the finest products.</p>
+                </div>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'home' %}" class="text-muted">Home</a></li>
+                        <li><a href="{% url 'about' %}" class="text-muted">About</a></li>
+                        <li><a href="{% url 'category_summary' %}" class="text-muted">Products</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h5>Contact Us</h5>
+                    <p class="text-muted">
+                        <i class="bi bi-envelope me-2"></i>support@euphoria.com<br>
+                        <i class="bi bi-telephone me-2"></i>(30) 123-4567
+                    </p>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center">
+                <p class="mb-0">&copy; {% now 'Y' %} Euphoria. All rights reserved.</p>
+            </div>
+        </div>
     </footer>
+
     <!-- Bootstrap core JS-->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Core theme JS-->

@@ -1,96 +1,75 @@
-<!-- Navigation-->
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <div class="container px-4 px-lg-5">
-    <a class="navbar-brand" href="{% url 'home' %}">Euphoria</a>
-    <button
-      class="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarSupportedContent"
-      aria-controls="navbarSupportedContent"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{% url 'home' %}"
-            >Home</a
-          >
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{% url 'search' %}"
-            >Search</a
-          >
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'about' %}">About</a>
-        </li>
+<nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container px-4 px-lg-5">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="bi bi-shop me-2"></i>Euphoria
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'search' %}">
+                            <i class="bi bi-search me-1"></i>Search
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'about' %}">About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-collection me-1"></i>Categories
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'category_summary' %}">All Products</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            {% for category in categories %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'category' category.slug %}">{{ category.name }}</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                </ul>
 
-        <li class="nav-item dropdown">
-          <a
-            class="nav-link dropdown-toggle"
-            id="navbarDropdown"
-            href="#"
-            role="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            >Categories</a
-          >
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item" href="{% url 'category_summary' %}">All Products</a></li>
-            <li><hr class="dropdown-divider" /></li>
-            {% for category in categories %}
-            <li>
-              <a class="dropdown-item" href="{% url 'category' category.slug %}">{{ category.name }}</a>
-            </li>
-            {% endfor %}
-          </ul>
-        </li>
-        {% if user.is_authenticated %}
-          <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Profile</a>
-            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-              <li><a class="dropdown-item" href="{% url 'update_user' %}">User Profile</a></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="{% url 'update_info'  %}">User Info</a></li>
-            </ul>
-          </li>
-          {% if user.is_superuser %}
-            <li class="nav-item dropdown">
-            
-            <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Orders</a>
-              <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="{% url 'shipped_dash' %}">Shipped Orders</a></li>
-                <li><hr class="dropdown-divider" /></li>
-                <li><a class="dropdown-item" href="{% url 'processing_dash'  %}">UnShipped Orders</a></li>
-              </ul>
-            </li>
-          {% endif %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-        </li>
-        {% else %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'login' %}">Login</a>
-        </li>
+                <!-- User Menu -->
+                <ul class="navbar-nav mb-2 mb-lg-0 me-4">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'update_user' %}">Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'update_info' %}">Settings</a></li>
+                            {% if user.is_superuser %}
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><a class="dropdown-item" href="{% url 'shipped_dash' %}">Shipped Orders</a></li>
+                            <li><a class="dropdown-item" href="{% url 'processing_dash' %}">Pending Orders</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
+                    {% endif %}
+                </ul>
 
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'register' %}">Register</a>
-        </li>
-        {% endif %}
-      </ul>
-      <form class="d-flex">
-        <a href="{% url 'cart_summary' %}" class="btn btn-outline-dark me-2">
-        
-          <i class="bi-cart-fill me-1"></i>
-          Cart
-          <span class="badge bg-dark text-white ms-1 rounded-pill" id="cart_quantity">{{ cart|length}}</span>
-        
-        </a>
-      </form>
-    </div>
-  </div>
-</nav>
+                <!-- Cart Button -->
+                <a href="{% url 'cart_summary' %}" class="btn btn-outline-light">
+                    <i class="bi bi-cart-fill me-1"></i>
+                    Cart
+                    <span class="badge bg-secondary ms-1" id="cart_quantity">{{ cart|length }}</span>
+                </a>
+            </div>
+        </div>
+    </nav>

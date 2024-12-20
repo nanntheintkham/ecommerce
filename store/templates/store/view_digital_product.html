@@ -5,7 +5,7 @@
     <h1>{{ product.name }}</h1>
     
     <div class="video-container">
-        <video id="streamPlayer" controls width="100%">
+        <video controls controlsList="nodownload" id="streamPlayer" controls width="100%">
             <source src="{{ stream_url }}" type="video/mp4">
             Your browser does not support the video tag.
         </video>

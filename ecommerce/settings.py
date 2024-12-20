@@ -17,6 +17,10 @@ AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
 AWS_STORAGE_BUCKET_NAME = os.environ['AWS_STORAGE_BUCKET_NAME']
 AWS_S3_REGION_NAME = os.environ['AWS_S3_REGION_NAME']
+
+# Google auth credentials
+SOCIAL_GOOGLE_CLIENT_ID = os.environ['SOCIAL_GOOGLE_CLIENT_ID']
+SOCIAL_GOOGLE_CLIENT_SECRET = os.environ['SOCIAL_GOOGLE_CLIENT_SECRET']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -26,8 +30,8 @@ SECRET_KEY = 'django-insecure-3_vyq10@%=g2*pi0^5s_tdu6tfs5a!dlensj*xewnrmh@h_v2f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ecommerce-production-97c1.up.railway.app', 'https://ecommerce-production-97c1.up.railway.app', 'localhost', '1fd7-80-99-40-134.ngrok-free.app']
-CSRF_TRUSTED_ORIGINS = ['https://ecommerce-production-97c1.up.railway.app', 'https://1fd7-80-99-40-134.ngrok-free.app']
+ALLOWED_HOSTS = ['ecommerce-production-97c1.up.railway.app', 'https://ecommerce-production-97c1.up.railway.app', '127.0.0.1', 'localhost', 'fe44-80-99-40-134.ngrok-free.app']
+CSRF_TRUSTED_ORIGINS = ['https://ecommerce-production-97c1.up.railway.app', 'https://fe44-80-99-40-134.ngrok-free.app']
 
 
 # Application definition
@@ -39,11 +43,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'store',
     'cart',
     'payment',
     'whitenoise.runserver_nostatic',
     'paypal.standard.ipn',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',  
 ]
 
 MIDDLEWARE = [
@@ -55,7 +64,42 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SITE_ID = 1  # Ensure SITE_ID matches your sites configuration
+
+LOGIN_REDIRECT_URL = '/'  # Redirect after login
+LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
+
+# AllAuth configuration
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+
+# Social account settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': SOCIAL_GOOGLE_CLIENT_ID,
+            'secret': SOCIAL_GOOGLE_CLIENT_SECRET,
+            'key': 'AIzaSyA-UOoz_PwRhYgo7fQgGH8wQ6se3cI5hlM'
+        }
+    }
+}
 
 ROOT_URLCONF = 'ecommerce.urls'
 
@@ -130,7 +174,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = ['C:/nann/ecom/static/']
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # White noise static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

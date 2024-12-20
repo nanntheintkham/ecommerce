@@ -1,0 +1,46 @@
+{% extends "store/base.html" %}
+{% load i18n %}
+{% load allauth %}
+{% load static %}
+
+{% block head_title %}
+    {% trans "Signup" %}
+{% endblock head_title %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 mb-16 px-4">
+    <div class="bg-white rounded-lg shadow-md p-8">
+        <div class="text-center mb-6">
+            {% element h1 class="text-2xl font-bold text-gray-800 mb-2" %}
+                {% trans "Sign Up" %}
+            {% endelement %}
+            
+            {% element p class="text-gray-600" %}
+                {% blocktrans with provider_name=account.get_provider.name site_name=site.name %}
+                You are about to use your {{provider_name}} account to login to {{site_name}}. As a final step, please complete the following form:
+                {% endblocktrans %}
+            {% endelement %}
+        </div>
+
+        {% url 'socialaccount_signup' as action_url %}
+        {% element form form=form method="post" action=action_url class="mt-6" %}
+            {% slot body %}
+                {% csrf_token %}
+                <div class="space-y-4">
+                    {% element fields form=form unlabeled=True class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" %}
+                    {% endelement %}
+                </div>
+                {{ redirect_field }}
+            {% endslot %}
+            
+            {% slot actions %}
+                <div class="mt-6">
+                    {% element button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-md transition duration-200" %}
+                        {% trans "Sign Up" %}
+                    {% endelement %}
+                </div>
+            {% endslot %}
+        {% endelement %}
+    </div>
+</div>
+{% endblock content %}

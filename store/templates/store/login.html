@@ -1,10 +1,12 @@
-{% extends 'store/base.html' %} {% block content %}
-<!-- Header-->
+{% extends 'store/base.html' %}
+{% load socialaccount %}
+
+{% block content %}
 <header class="bg-dark py-5">
   <div class="container px-4 px-lg-5 my-5">
     <div class="text-center text-white">
       <h1 class="display-4 fw-bolder">Login</h1>
-      <p class="lead fw-normal text-white-50 mb-0">Login to your account..</p>
+      <p class="lead fw-normal text-white-50 mb-0">Login to your account</p>
     </div>
   </div>
 </header>
@@ -13,40 +15,30 @@
   <div class="row">
     <center>
       <div class="col-8">
-        <br />
-        <br />
-        <br />
-        <br />
+        <br /><br />
+        
+        <!-- Traditional Login Form -->
         <form method="POST" action="{% url 'login' %}">
           {% csrf_token %}
           <div class="mb-3">
-            <input
-              type="text"
-              class="form-control"
-              id="username"
-              name="username"
-              placeholder="Enter your username"
-            />
+            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" />
           </div>
           <div class="mb-3">
-            <input
-              type="password"
-              class="form-control"
-              id="password"
-              name="password"
-              placeholder="Enter your password"
-            />
+            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" />
           </div>
-          <br />
-          <br />
+          <br /><br />
           <button type="submit" class="btn btn-secondary">Login</button>
         </form>
-        <br />
-        <br />
-        <br />
-        <br />
-        <br />
-        <br />
+        
+        <!-- Google OAuth Login -->
+        <div class="mt-4">
+          <p>Or login with:</p>
+          <a href="{% provider_login_url 'google' %}" class="btn btn-danger">
+            <i class="fab fa-google"></i> Login with Google
+          </a>
+        </div>
+        
+        <br /><br />
       </div>
     </center>
   </div>

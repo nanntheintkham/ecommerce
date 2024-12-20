@@ -8,6 +8,7 @@ from django.db.models import Q
 from django import forms
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from allauth.socialaccount.models import SocialAccount
 from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
 from .models import UserDigitalPurchase
 from payment.forms import ShippingAddressForm
@@ -206,13 +207,19 @@ def register_user(request):
     if request.method == "POST":
         form = SignUpForm(request.POST)
         if form.is_valid():
-            form.save()
+            user = form.save()
+            
+            # Check if user registered via social account
+            try:
+                social_account = SocialAccount.objects.get(user=user)
+                # Additional processing for social login if needed
+            except SocialAccount.DoesNotExist:
+                pass
+            
             username = form.cleaned_data['username']
             password = form.cleaned_data['password1']
-            #login user
             user = authenticate(username=username, password=password)
             login(request, user)
-            # redirect to home page
             messages.success(request, f"Account created for {username} successfully. Please fill out your info below.")
             return redirect('update_info')
         else:

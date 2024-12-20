@@ -1,0 +1,46 @@
+{% extends "store/base.html" %}
+{% load i18n %}
+{% load allauth %}
+{% load static %}
+
+{% block head_title %}
+    {% trans "Sign In" %}
+{% endblock head_title %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 mb-16 px-4">
+    <div class="bg-white rounded-lg shadow-md p-8">
+        {% if process == "connect" %}
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                    {% blocktrans with provider.name as provider %}Connect {{ provider }}{% endblocktrans %}
+                </h1>
+                <p class="text-gray-600">
+                    {% blocktrans with provider.name as provider %}You are about to connect a new third-party account from {{ provider }}.{% endblocktrans %}
+                </p>
+            </div>
+        {% else %}
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                    {% blocktrans with provider.name as provider %}Sign In Via {{ provider }}{% endblocktrans %}
+                </h1>
+                <p class="text-gray-600">
+                    {% blocktrans with provider.name as provider %}You are about to sign in using a third-party account from {{ provider }}.{% endblocktrans %}
+                </p>
+            </div>
+        {% endif %}
+
+        {% element form method="post" no_visible_fields=True class="mt-6" %}
+            {% slot actions %}
+                {% csrf_token %}
+                <div class="flex justify-content-center">
+                    {% element button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-md transition duration-200" %}
+                        {% trans "Continue" %}
+                    {% endelement %}
+                </div>
+                <br/>
+            {% endslot %}
+        {% endelement %}
+    </div>
+</div>
+{% endblock content %}

@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -11,6 +12,9 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 import uuid
 import datetime
+import stripe
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 def clear_cart(request):
     # Clear the cart
@@ -172,6 +176,25 @@ def process_order(request):
         messages.error(request, "Access denied!")
         return redirect('home')
 
+def stripe_payment_view(request):
+    if request.POST:
+        # Get the token from the request
+        token = request.POST['stripeToken']
+
+        try:
+            # Create a charge using the token
+            charge = stripe.Charge.create(
+                amount=int(request.POST['amount'] * 100),  # amount in cents
+                currency='HUF',
+                description='Example charge',
+                source=token,
+            )
+            return JsonResponse({"message": "Payment successful!"})
+        except stripe.error.CardError as e:
+            return JsonResponse({"error": str(e)})
+        return render(request, "payment/stripe_payment.html", {
+        'STRIPE_PUBLIC_KEY': settings.STRIPE_PUBLIC_KEY
+    })
 
 def billing_info(request):
     if request.POST:

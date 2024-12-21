@@ -1,24 +1,78 @@
 {% extends 'store/base.html' %}
 
 {% block content %}
-<div class="container">
-    <h1>Digital Products</h1>
-    <div class="row">
-        {% for product in digital_products %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                {% if product.thumbnail %}
-                <img src="{{ product.thumbnail.url }}" class="card-img-top" alt="{{ product.name }}">
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text">{{ product.description|truncatewords:20 }}</p>
-                    <p class="card-text">Price: {{ product.price }} HUF</p>
-                    <a href="{% url 'digital_product_detail' product.pk %}" class="btn btn-primary">View Details</a>
+<!-- Header -->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Digital Products</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Access premium digital content instantly</p>
+        </div>
+    </div>
+</header>
+
+<section class="py-5 bg-light">
+    <div class="container px-4 px-lg-5">
+        <!-- Search and Filter Bar -->
+        <div class="row mb-4">
+            <div class="col-md-8 col-lg-6 mx-auto">
+                <div class="search-bar bg-white rounded shadow-sm p-2">
+                    <div class="input-group">
+                        <span class="input-group-text border-0 bg-transparent">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="search" class="form-control border-0" placeholder="Search digital products...">
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
+
+        <!-- Products Grid -->
+        <div class="row g-4">
+            {% for product in digital_products %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm digital-card">
+                    <div class="product-image-wrapper">
+                        {% if product.thumbnail %}
+                        <img src="{{ product.thumbnail.url }}" class="card-img-top" alt="{{ product.name }}">
+                        {% endif %}
+                        <div class="product-badge">
+                            <span class="badge bg-primary">Digital</span>
+                        </div>
+                        <div class="product-overlay">
+                            <div class="overlay-content">
+                                <a href="{% url 'digital_product_detail' product.pk %}" 
+                                   class="btn btn-light btn-sm">
+                                    <i class="bi bi-eye me-1"></i> Preview
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-2">{{ product.name }}</h5>
+                        <p class="card-text text-muted small mb-3">
+                            {{ product.description|truncatewords:15 }}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="price">{{ product.price }} HUF</span>
+                            <a href="{% url 'digital_product_detail' product.pk %}" 
+                               class="btn btn-primary btn-sm">
+                                Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-file-earmark-x display-1 text-muted mb-3"></i>
+                    <h3>No Digital Products Available</h3>
+                    <p class="text-muted">Check back soon for new digital content!</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
-</div>
+</section>
 {% endblock %}

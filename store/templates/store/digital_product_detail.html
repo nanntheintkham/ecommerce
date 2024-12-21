@@ -1,49 +1,159 @@
 {% extends 'store/base.html' %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-6">
-            
-            <img src="{{ product.image.url }}" class="img-fluid rounded-start" alt="...">
-            
-        </div>
-        <div class="col-md-6">
-            <h1>{{ product.name }}</h1>
-            <p>{{ product.description }}</p>
-            <p>Price: {{ product.price }} HUF</p>
-            
-            {% if user.is_authenticated %}
-                {% if purchased %}
-                <a href="{% url 'view_digital_product' product.pk %}" class="btn btn-success">View Product</a>
-                {% else %}
-                <button type="button" value="{{ product.id }}" class="btn btn-secondary" id="add-cart">Add To Cart</button>
-                {% endif %}
-            {% else %}
-            <p>Please <a href="{% url 'login' %}">log in</a> to purchase this digital product.</p>
-            {% endif %}
+<!-- Header with Breadcrumb -->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                {% comment %} <li class="breadcrumb-item"><a href="{% url 'digital_products' %}" class="text-white-50">Digital Products</a></li> {% endcomment %}
+                <li class="breadcrumb-item active text-white" aria-current="page">{{ product.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-5">
+            <!-- Product Preview -->
+            <div class="col-lg-6">
+                <div class="product-preview">
+                    <div class="position-relative">
+                        <img src="{{ product.image.url }}" 
+                             class="img-fluid rounded shadow-sm" 
+                             alt="{{ product.name }}">
+                        <span class="badge bg-primary position-absolute top-0 end-0 m-3">
+                            Digital Product
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="col-lg-6">
+                <div class="product-info">
+                    <h1 class="display-5 fw-bold mb-4">{{ product.name }}</h1>
+                    
+                    <div class="price-box mb-4">
+                        <span class="h2 fw-bold text-primary">{{ product.price }} HUF</span>
+                    </div>
+
+                    <div class="description mb-4">
+                        <h5 class="fw-bold mb-3">Description</h5>
+                        <p class="lead text-muted">{{ product.description }}</p>
+                    </div>
+
+                    <!-- Purchase Actions -->
+                    <div class="purchase-actions mb-4">
+                        {% if user.is_authenticated %}
+                            {% if purchased %}
+                            <div class="alert alert-success d-flex align-items-center mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <div>You already own this product</div>
+                            </div>
+                            <a href="{% url 'view_digital_product' product.pk %}" 
+                               class="btn btn-primary btn-lg w-100">
+                                <i class="bi bi-play-circle me-2"></i>Access Content
+                            </a>
+                            {% else %}
+                            <button type="button" 
+                                    value="{{ product.id }}" 
+                                    class="btn btn-primary btn-lg w-100" 
+                                    id="add-cart">
+                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                            </button>
+                            {% endif %}
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Please <a href="{% url 'login' %}" class="alert-link">login</a> to purchase this product
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Features -->
+                    <div class="features">
+                        <h5 class="fw-bold mb-3">Product Features</h5>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="feature-item d-flex align-items-center">
+                                    <i class="bi bi-lightning-charge text-primary me-2"></i>
+                                    <span>Instant Access</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-item d-flex align-items-center">
+                                    <i class="bi bi-infinity text-primary me-2"></i>
+                                    <span>Lifetime Access</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-item d-flex align-items-center">
+                                    <i class="bi bi-shield-check text-primary me-2"></i>
+                                    <span>Secure Content</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-item d-flex align-items-center">
+                                    <i class="bi bi-download text-primary me-2"></i>
+                                    <span>Easy Access</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
 
+{% block extra_js %}
 <script>
-    $(document).on('click', '#add-cart', function(e){
-    e.preventDefault();
-    $.ajax({
-      type: 'POST',
-      url: '{% url 'cart_add' %}',
-      data: {
-        product_id: $('#add-cart').val(),
-        csrfmiddlewaretoken: '{{ csrf_token }}',
-        product_qty: '1',
-        action: 'post'
-        },
-
-        error: function(xhr, errmsg, err){
-          console.log(xhr.status + ": " + xhr.responseText);
-        }
+$(document).ready(function() {
+    $('#add-cart').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        btn.prop('disabled', true)
+           .html('<span class="spinner-border spinner-border-sm me-2"></span>Adding...');
+        
+        $.ajax({
+            type: 'POST',
+            url: '{% url 'cart_add' %}',
+            data: {
+                product_id: btn.val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                product_qty: '1',
+                action: 'post'
+            },
+            success: function() {
+                btn.html('<i class="bi bi-check-lg me-2"></i>Added to Cart')
+                   .removeClass('btn-primary')
+                   .addClass('btn-success');
+                
+                setTimeout(() => {
+                    btn.html('<i class="bi bi-cart-plus me-2"></i>Add to Cart')
+                       .removeClass('btn-success')
+                       .addClass('btn-primary')
+                       .prop('disabled', false);
+                }, 2000);
+            },
+            error: function(xhr, errmsg, err) {
+                btn.html('<i class="bi bi-exclamation-triangle me-2"></i>Error')
+                   .removeClass('btn-primary')
+                   .addClass('btn-danger');
+                
+                setTimeout(() => {
+                    btn.html('<i class="bi bi-cart-plus me-2"></i>Add to Cart')
+                       .removeClass('btn-danger')
+                       .addClass('btn-primary')
+                       .prop('disabled', false);
+                }, 2000);
+            }
+        });
     });
-  })
+});
 </script>
 {% endblock %}
-
+{% endblock %}

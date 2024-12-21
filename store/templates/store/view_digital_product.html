@@ -1,31 +1,308 @@
 {% extends 'store/base.html' %}
 
+{% block extra_css %}
+<link href="https://vjs.zencdn.net/8.5.2/video-js.css" rel="stylesheet" />
+<style>
+    /* Main Page Container - Centers Everything */
+    .page-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center; /* Vertical centering */
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        min-height: 100vh; /* Full viewport height */
+        box-sizing: border-box;
+    }
+
+    /* Video Player Container */
+    .video-player-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        max-width: 800px;
+        margin: 1rem auto;
+        background: #000;
+    }
+
+    .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 800px;
+        background: #000;
+        user-select: none;
+    }
+
+    .video-js {
+        width: 100%;
+        height: 0;
+        padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        position: relative;
+    }
+
+    .video-js .vjs-tech {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Product Info Section */
+    .product-info {
+        width: 100%;
+        max-width: 800px;
+        margin: 2rem auto;
+        text-align: center; /* Ensures text is centered */
+    }
+
+    .product-info h1,
+    .product-info .description-section,
+    .product-info .features-section {
+        text-align: center;
+    }
+
+    /* Breadcrumb Navigation */
+    .breadcrumb {
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Notes Section */
+    .notes {
+        width: 100%;
+        max-width: 800px;
+        margin: 2rem auto;
+        text-align: center;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 1rem;
+        }
+
+        .video-player-container {
+            max-width: 100%;
+        }
+    }
+</style>
+
+{% endblock %}
+
 {% block content %}
+
+<!-- Header -->
+<header class="bg-dark py-5 mb-5">
+    <div class="container px-4 px-lg-5">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                {% comment %} <li class="breadcrumb-item"><a href="{% url 'digital_products' %}" class="text-white-50">Digital Products</a></li> {% endcomment %}
+                {% comment %} <li class="breadcrumb-item"><a href="{% url 'digital_product_detail' product.pk %}" class="text-white-50">{{ product.name }}</a></li> {% endcomment %}
+                <li class="breadcrumb-item active text-white" aria-current="page">View</li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
 <div class="container">
-    <h1>{{ product.name }}</h1>
-    
-    <div class="video-container">
-        <video controls controlsList="nodownload" id="streamPlayer" controls width="100%">
-            <source src="{{ stream_url }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="video-player-container mb-4">
+                <div class="video-container">
+                    <div class="ratio ratio-16x9 shadow rounded overflow-hidden">
+                            <div class="video-shield"></div>
+                            <video 
+                            id="streamPlayer" 
+                            class="video-js vjs-big-play-centered" 
+                            controls 
+                            controlsList="nodownload noplaybackrate"
+                            oncontextmenu="return false;"
+                            preload="auto"
+                            poster="{{ product.image.url }}"
+                            data-setup='{
+                                "fluid": true,
+                                "playbackRates": false,
+                                "controlBar": {
+                                "pictureInPictureToggle": false,
+                                "fullscreenToggle": true
+                                }
+                            }'>
+                            <source src="{{ stream_url }}" type="video/mp4">
+                            <p class="vjs-no-js">
+                                To view this video please enable JavaScript, and consider upgrading to a
+                                web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                            </p>
+                            </video>
+                        </div>
+                    </div>
+                <!-- Rest of the product info content remains the same -->
+                <div class="product-info bg-white rounded shadow-sm p-4 mb-4">
+                    <h1 class="h2 mb-3">{{ product.name }}</h1>
+                
+                    <!-- Description -->
+                    <div class="description-section mb-4">
+                        <h5 class="text-muted mb-3">Description</h5>
+                        <div class="lead">
+                            {{ product.description }}
+                        </div>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="features-section">
+                        <h5 class="text-muted mb-3">Features</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-hd text-primary me-2"></i>
+                                    <span>HD Quality</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-clock text-primary me-2"></i>
+                                    <span>Lifetime Access</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-phone text-primary me-2"></i>
+                                    <span>Mobile Compatible</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-cloud text-primary me-2"></i>
+                                    <span>Cloud Streaming</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes Section -->
+                <div class="notes bg-light rounded shadow-sm p-4 mb-4">
+                    <h5 class="text-muted mb-3">Important Notes</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex align-items-center mb-2">
+                            <i class="bi bi-info-circle text-primary me-2"></i>
+                            <span>This content is for personal use only</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-2">
+                            <i class="bi bi-shield-check text-primary me-2"></i>
+                            <span>DRM protected content</span>
+                        </li>
+                        <li class="d-flex align-items-center">
+                            <i class="bi bi-wifi text-primary me-2"></i>
+                            <span>Stable internet connection recommended</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="product-description mt-4">
-        <h2>Description</h2>
-        <p>{{ product.description }}</p>
-    </div>
-
-    <script>
-        // Prevent video download
-        document.getElementById('streamPlayer').addEventListener('contextmenu', function(e) {
-            e.preventDefault(); // Disable right-click
-        });
-
-        // Prevent direct download
-        document.getElementById('streamPlayer').addEventListener('dragstart', function(e) {
-            e.preventDefault();
-        });
-    </script>
 </div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://vjs.zencdn.net/8.5.2/video.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Disable keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U') {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+
+        // Initialize Video.js player with enhanced security
+        const player = videojs('streamPlayer', {
+            controls: true,
+            autoplay: false,
+            preload: 'auto',
+            responsive: true,
+            fluid: true,
+            controlBar: {
+                pictureInPictureToggle: false,
+                fullscreenToggle: true,
+                volumePanel: {
+                    inline: false
+                }
+            },
+            userActions: {
+                hotkeys: false,
+                doubleClick: false
+            }
+        });
+
+        // Prevent right-click on video container
+        const videoContainer = document.querySelector('.video-container');
+        videoContainer.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Prevent drag and drop
+        videoContainer.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Handle frame seeking attempts
+        player.on('seeking', function() {
+            const currentTime = player.currentTime();
+            if (currentTime < 0) {
+                player.currentTime(0);
+            }
+        });
+
+        // Disable picture-in-picture
+        const videoElement = document.querySelector('video');
+        videoElement.disablePictureInPicture = true;
+
+        // Save progress with encryption
+        function encryptTime(time) {
+            // Simple encryption for demo - replace with more secure method
+            return btoa(time.toString());
+        }
+
+        function decryptTime(encrypted) {
+            try {
+                return parseFloat(atob(encrypted));
+            } catch {
+                return 0;
+            }
+        }
+
+        // Save encrypted progress periodically
+        player.on('timeupdate', function() {
+            const videoId = videoElement.getAttribute('data-video-id');
+            const encryptedTime = encryptTime(player.currentTime());
+            localStorage.setItem(`video-time-${videoId}`, encryptedTime);
+        });
+
+        // Load encrypted progress
+        const videoId = videoElement.getAttribute('data-video-id');
+        let savedTime = localStorage.getItem(`video-time-${videoId}`);
+        if (savedTime) {
+            player.currentTime(decryptTime(savedTime));
+        }
+
+        // Error handling
+        player.on('error', function() {
+            console.error('Video playback error');
+            player.error(null);
+            player.reset();
+        });
+    });
+</script>
 {% endblock %}

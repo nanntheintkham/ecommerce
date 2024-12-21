@@ -21,6 +21,10 @@ AWS_S3_REGION_NAME = os.environ['AWS_S3_REGION_NAME']
 # Google auth credentials
 SOCIAL_GOOGLE_CLIENT_ID = os.environ['SOCIAL_GOOGLE_CLIENT_ID']
 SOCIAL_GOOGLE_CLIENT_SECRET = os.environ['SOCIAL_GOOGLE_CLIENT_SECRET']
+
+# Stripe credentials
+STRIPE_PUBLIC_KEY = os.environ['STRIPE_PUBLIC_KEY']
+STRIPE_SECRET_KEY = os.environ['STRIPE_SECRET_KEY']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

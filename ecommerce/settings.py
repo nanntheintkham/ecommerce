@@ -25,6 +25,7 @@ SOCIAL_GOOGLE_CLIENT_SECRET = os.environ['SOCIAL_GOOGLE_CLIENT_SECRET']
 # Stripe credentials
 STRIPE_PUBLIC_KEY = os.environ['STRIPE_PUBLIC_KEY']
 STRIPE_SECRET_KEY = os.environ['STRIPE_SECRET_KEY']
+STRIPE_WEBHOOK_SECRET = os.environ['STRIPE_WEBHOOK_SECRET']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

@@ -1,126 +1,136 @@
 {% extends 'store/base.html' %}
 
+{% block extra_css %}
+<style>
+    .payment-method-container {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    .payment-button {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+    }
+    .stripe-button-container {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-
     <!-- Header-->
     <header class="bg-dark py-5">
         <div class="container px-4 px-lg-5 my-5">
             <div class="text-center text-white">
-                <h1 class="display-4 fw-bolder">Billing Info</h1>
-                <p class="lead fw-normal text-white-50 mb-0">Enter your payment infor</p>
+                <h1 class="display-4 fw-bolder">Payment</h1>
+                <p class="lead fw-normal text-white-50 mb-0">Choose your payment method</p>
             </div>
         </div>
     </header>
-    <br/>
-    <div class="container">
+
+    <div class="container py-5">
         <div class="row">
             <div class="col-md-6 offset-md-3">
-                <div class="card">
+                <!-- Order Summary Card -->
+                <div class="card mb-4">
                     <div class="card-header">
-                        Order Summary
+                        <h5 class="mb-0">Order Summary</h5>
                     </div>
                     <div class="card-body">
                         {% for product in cart_products %}
-                            {{ product.name }} - 
-                            {% if product.is_sale %} 
-                                {{ product.sale_price }} HUF 
-                            {% else %} 
-                                {{ product.price }} HUF 
-                            {% endif %}
-                            <br/>
-                            <small>Quantity - 
-                            {% for key, value in quantities.items %}
-                                {% if key == product.id|slugify %}
-                                    {{ value }}
-                                {% endif %}
-                            {% endfor %}</small>
-                            <br/><br/>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="mb-0">{{ product.name }}</h6>
+                                    <small>Quantity: 
+                                        {% for key, value in quantities.items %}
+                                            {% if key == product.id|slugify %}
+                                                {{ value }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if product.is_sale %}
+                                        {{ product.sale_price }} HUF
+                                    {% else %}
+                                        {{ product.price }} HUF
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% endfor %}
-                        <hr/>
-                        Total: {{ totals }} HUF
-                        <br/><br/>
-                        <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <h5>Total:</h5>
+                            <h5>{{ totals }} HUF</h5>
+                        </div>
                     </div>
                 </div>
-                <br/><br/>
 
-                <div class="card">
-                    <div class="card-header">
-                    Shipping Info
+                <!-- Payment Methods -->
+                <div class="payment-method-container">
+                    <h5 class="mb-4">Select Payment Method</h5>
+                    
+                    <!-- PayPal Button -->
+                    <div class="mb-4">
+                        {{ paypal_form.render }}
                     </div>
-                    <div class="card-body">
-                        Name: {{ shipping_info.shipping_fullname }} <br/>
-                        Email: {{ shipping_info.shipping_email }} <br/>
-                        Address 1: {{ shipping_info.shipping_address1 }} <br/>
-                        Address 2: {{ shipping_info.shipping_address2 }} <br/>
-                        City: {{ shipping_info.shipping_city }} <br/>
-                        State: {{ shipping_info.shipping_state }} <br/>
-                        Zip: {{ shipping_info.shipping_zipcode }} <br/>
-                        Country: {{ shipping_info.shipping_country }} <br/><br/>
 
-                        <a href="{% url 'checkout' %}" class="btn btn-sm btn-outline-secondary">Update Shipping</a>
+                    <!-- Stripe Button -->
+                    <div class="stripe-button-container">
+                        <button id="stripe-button" class="btn btn-dark payment-button">
+                            <i class="fas fa-credit-card me-2"></i>Pay with Card
+                        </button>
                     </div>
                 </div>
-                <br/>
-                <h3>Payment Methods</h3>
-            
-            <!-- PayPal Button -->
-            <div class="payment-option mb-4">
-                <h4>Pay with PayPal</h4>
-                {{ paypal_form.render }}
             </div>
-
-            <!-- Stripe Button -->
-            <div class="payment-option">
-                <h4>Pay with Card</h4>
-                <button id="stripe-button" class="btn btn-primary">
-                    Pay with Card
-                </button>
-            </div>
-                <br/>
-
-                <button type="submit" class="btn btn-dark">Pay Now</button>
-                </form>
-                <br/><br/>
-            </div>
-            
         </div>
     </div>
-    <script>
-    // Initialize Stripe
-    const stripe = Stripe('{{ stripe_data.publishable_key }}');
-    
-    // Handle Stripe payment
-    document.getElementById('stripe-button').addEventListener('click', async () => {
-        try {
-            const response = await fetch('{% url "create_checkout_session" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
-            });
-            
-            const session = await response.json();
-            
-            if (session.error) {
-                console.error('Error:', session.error);
-                return;
-            }
-            
-            // Redirect to Stripe Checkout
-            const result = await stripe.redirectToCheckout({
-                sessionId: session.sessionId
-            });
-            
-            if (result.error) {
-                console.error('Error:', result.error);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    });
-</script>
 
+    <!-- Stripe Scripts -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        // Initialize Stripe
+        const stripe = Stripe('{{ stripe_data.publishable_key }}');
+        
+        // Handle Stripe payment
+        document.getElementById('stripe-button').addEventListener('click', async () => {
+    try {
+        const button = document.getElementById('stripe-button');
+        button.disabled = true;
+        button.innerHTML = 'Processing...';
+
+        const response = await fetch('{% url "create_checkout_session" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        const result = await stripe.redirectToCheckout({
+            sessionId: data.sessionId
+        });
+
+        if (result.error) {
+            throw new Error(result.error.message);
+        }
+    } catch (error) {
+        console.error('Payment failed:', error);
+        alert('Error: ' + error.message);
+
+        const button = document.getElementById('stripe-button');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pay with Card';
+    }
+});
+
+    </script>
 {% endblock %}

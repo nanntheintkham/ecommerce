@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 import uuid
 import datetime
 import stripe
+import logging
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -177,7 +178,10 @@ def process_order(request):
         messages.error(request, "Access denied!")
         return redirect('home')
 
+logger = logging.getLogger(__name__)
+
 def create_stripe_session(request):
+    logger.info("Stripe checkout session started")  # Add this line
     if request.method == 'POST':
         try:
             cart = Cart(request)
@@ -193,14 +197,13 @@ def create_stripe_session(request):
                         'currency': 'huf',
                         'product_data': {
                             'name': product.name,
-                            'images': [request.build_absolute_uri(product.image.url)] if product.image else [],
+                            
                         },
                         'unit_amount': int(price * 100),  # Convert to cents
                     },
                     'quantity': cart.get_quants()[str(product.id)],
                 })
 
-            # Create Stripe checkout session
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=line_items,
@@ -208,13 +211,15 @@ def create_stripe_session(request):
                 success_url=request.build_absolute_uri(reverse('payment_success')),
                 cancel_url=request.build_absolute_uri(reverse('payment_failed')),
                 metadata={
-                    'order_id': str(uuid.uuid4()),  # Generate unique order ID
+                    'order_id': str(uuid.uuid4()),
                     'user_id': str(request.user.id) if request.user.is_authenticated else 'guest'
                 }
             )
             
+            logger.info("Stripe session created successfully")
             return JsonResponse({'sessionId': checkout_session.id})
         except Exception as e:
+            logger.error(f"Error in Stripe session: {e}")
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
@@ -239,33 +244,37 @@ def stripe_webhook(request):
 
     return JsonResponse({'status': 'success'})
 
+
+import logging
+logger = logging.getLogger(__name__)
+
 def handle_completed_checkout_session(session):
-    # Get order metadata
     order_id = session.metadata.get('order_id')
     user_id = session.metadata.get('user_id')
 
+    logger.info(f"Stripe Webhook Triggered: Order ID {order_id}, User ID {user_id}")
     try:
-        # Create order in your database
         if user_id != 'guest':
             user = User.objects.get(id=int(user_id))
             order = Order.objects.create(
                 user=user,
                 invoice=order_id,
-                amount_paid=session.amount_total / 100,  # Convert from cents
+                amount_paid=session.amount_total / 100,
                 payment_method='stripe'
             )
+            logger.info(f"Order created for user {user.username} with amount {order.amount_paid}")
         else:
             order = Order.objects.create(
                 invoice=order_id,
                 amount_paid=session.amount_total / 100,
                 payment_method='stripe'
             )
-
-        # Additional order processing...
-
+            logger.info(f"Order created for guest with amount {order.amount_paid}")
+    except User.DoesNotExist:
+        logger.error(f"User with ID {user_id} does not exist.")
     except Exception as e:
-        # Log the error
-        print(f"Error processing Stripe payment: {str(e)}")
+        logger.error(f"Error processing Stripe payment: {str(e)}")
+
 
 def billing_info(request):
     if request.POST:
@@ -357,28 +366,29 @@ def purchase_digital_product(request, pk):
 def payment_success(request):
     clear_cart(request)
 
-    # Fetch the most recent order of the logged-in user
+    digital_products_with_urls = []
+
     if request.user.is_authenticated:
         order = Order.objects.filter(user=request.user).last()
         
-        if order and hasattr(order, 'orderitem_set'):  # Check for associated items
-            # Get the first product related to the order
-            first_item = order.orderitem_set.first()
+        if order and hasattr(order, 'orderitem_set'):
+            for item in order.orderitem_set.all():
+                if item.product.product_type == 'digital':
+                    UserDigitalPurchase.objects.get_or_create(user=request.user, digital_product=item.product)
+                    
+                    stream_url = item.product.get_presigned_url() if hasattr(item.product, 'get_presigned_url') else None
+                    digital_products_with_urls.append({
+                        'product': item.product,
+                        'stream_url': stream_url
+                    })
 
-            if first_item and first_item.product.product_type == 'digital':
-                product = first_item.product
-                UserDigitalPurchase.objects.get_or_create(user=request.user, digital_product=product)
-                stream_url = product.get_presigned_url()
+    context = {
+        'order': order if request.user.is_authenticated else None,
+        'digital_products_with_urls': digital_products_with_urls,
+    }
 
-                return render(request, 'payment/payment_success.html', {
-                    'product': product,
-                    'stream_url': stream_url
-                })
-        return render(request, 'payment/payment_success.html', {'order': order})
-    else:
-        # For guest users or fallback
-        order = None
-    return render(request, 'payment/payment_success.html', {'order': order})
+    return render(request, 'payment/payment_success.html', context)
+
 
 def payment_failed(request):
     return render(request, 'payment/payment_failed.html', {})

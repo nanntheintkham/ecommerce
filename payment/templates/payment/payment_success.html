@@ -21,22 +21,32 @@
                         <div class="card-body">
                             <h5 class="card-title">Payment Successful!</h5>
                             <p class="card-text">Thank you for your purchase!</p>
-                            {% if order %}
-                                
-                                <p>Your order has been placed successfully.</p>
-                                <p class="card-text">
-                                <strong>Total Amount Paid:</strong> {{ order.amount_paid }} HUF
-                                </p>
                             
-                            {% else %}
-                                {% if stream_url %}
-                                    <p>Access your product here:</p>
-                                    <a href="{% url 'view_digital_product' product.pk %}" class="btn btn-primary">View Product</a>
-                                {% else %}
-                                    <p>No order details found.</p>
-                                    <p class="card-text">We couldn't retrieve your order details.</p>
-                                {% endif %}
+                            {% if order %}
+                                <p>Your order has been placed successfully.</p>
+                                <p><strong>Total Amount Paid:</strong> {{ order.amount_paid }} HUF</p>
                             {% endif %}
+                            
+                            {% if digital_products_with_urls %}
+    <hr>
+    <h5>Your Digital Products:</h5>
+    <ul>
+        {% for item in digital_products_with_urls %}
+            <li>
+                {{ item.product.name }}: 
+                {% if item.stream_url %}
+                    <a href="{{ item.stream_url }}" class="btn btn-primary btn-sm">Access Product</a>
+                {% else %}
+                    <span>No streaming link available</span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+                            
+                            <br>
+                            <a href="{% url 'home' %}" class="btn btn-primary">Continue Shopping</a>
                         </div>
                     </div>
                     <br /><br /><br />

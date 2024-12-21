@@ -26,6 +26,15 @@ SOCIAL_GOOGLE_CLIENT_SECRET = os.environ['SOCIAL_GOOGLE_CLIENT_SECRET']
 STRIPE_PUBLIC_KEY = os.environ['STRIPE_PUBLIC_KEY']
 STRIPE_SECRET_KEY = os.environ['STRIPE_SECRET_KEY']
 STRIPE_WEBHOOK_SECRET = os.environ['STRIPE_WEBHOOK_SECRET']
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nanntheint.dev@gmail.com'
+EMAIL_HOST_PASSWORD = os.environ['EMAIL_HOST_PASSWORD']
+DEFAULT_FROM_EMAIL = 'nanntheint.dev@gmail.com'
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

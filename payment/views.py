@@ -11,6 +11,7 @@ from paypal.standard.forms import PayPalPaymentsForm
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
+from django.core.mail import send_mail
 import uuid
 import datetime
 import stripe
@@ -93,90 +94,6 @@ def shipped_dash(request):
         return render(request, 'payment/shipped_dash.html', {"orders": orders})
     else:
         messages.error(request, 'Unauthorized access. Please login as a superuser.')
-        return redirect('home')
-
-
-def process_order(request):
-    if request.POST:
-        cart = Cart(request)
-        cart_products = cart.get_prods
-        quantities = cart.get_quants
-        totals = cart.cart_total()
-        # Get billing info from the last page
-        payment_form = PaymentForm(request.POST or None)
-        # Get shipping data
-        shipping_data = request.session.get('shipping_data')
-        
-        # Get Order info
-        full_name = shipping_data['shipping_fullname']
-        email = shipping_data['shipping_email']
-
-        # Get shipping address from session info
-        shipping_address = f"{shipping_data['shipping_address1']}\n{shipping_data['shipping_address2']}\n{shipping_data['shipping_city']}\n{shipping_data['shipping_state']}\n{shipping_data['shipping_zipcode']}\n{shipping_data['shipping_country']}"
-        amount_paid = totals
-
-        # Create order
-        if request.user.is_authenticated:
-            # logged in
-            user = request.user
-            create_order = Order(user=user, full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid)
-            create_order.save()
-
-            # Add order items
-            order_id = create_order.pk
-            # Get product information
-            for product in cart_products():
-                 # Handle digital products
-                if product.product_type == 'digital':
-                    UserDigitalPurchase.objects.get_or_create(user=user, digital_product=product)
-
-                else:
-                    product_id = product.id
-                    if product.is_sale:
-                        price = product.sale_price
-                    else:
-                        price = product.price
-                
-                    for key, value in quantities().items():
-                        if int(key) == product_id:
-                            create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
-                            create_order_item.save()
-
-            clear_cart(request)
-            # Delete Cart from db
-            current_user = Profile.objects.filter(user__id=request.user.id)
-            current_user.update(old_cart="")
-            
-                    
-        else:
-            # guest user
-            create_order = Order(full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid)
-            create_order.save()
-
-            # Add order items
-            order_id = create_order.pk
-            # Get product information
-            for product in cart_products():
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.price
-                
-                for key, value in quantities().items():
-                    if int(key) == product_id:
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, quantity=value, price=price)
-                        create_order_item.save()
-
-            clear_cart(request)
-
-            
-
-        messages.success(request, "Your order has been placed!")
-        return redirect('home')
-
-    else:
-        messages.error(request, "Access denied!")
         return redirect('home')
 
 logger = logging.getLogger(__name__)
@@ -443,11 +360,6 @@ def handle_completed_checkout_session(session):
             
             logger.info(f"Successfully created guest order {order.id}")
 
-        # # Send order confirmation email
-        # try:
-        #     send_order_confirmation_email(order)
-        # except Exception as e:
-        #     logger.error(f"Failed to send order confirmation email: {e}")
 
         return order
 
@@ -458,6 +370,41 @@ def handle_completed_checkout_session(session):
         logger.error(f"Error in handle_completed_checkout_session: {e}")
         raise
 
+def send_order_confirmation_email(order):
+    """
+    Send order confirmation email to customer
+    """
+    try:
+        subject = f'Order Confirmation - Order #{order.invoice}'
+        message = f"""
+        Thank you for your order!
+        
+        Order Details:
+        Order Number: {order.invoice}
+        Total Amount: {order.amount_paid} HUF
+        
+        Shipping Address:
+        {order.shipping_address}
+        
+        We will process your order soon.
+        """
+        
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [order.email]
+        
+        send_mail(
+            subject,
+            message,
+            from_email,
+            recipient_list,
+            fail_silently=False,
+        )
+        
+        logger.info(f"Order confirmation email sent for order {order.invoice}")
+        
+    except Exception as e:
+        logger.error(f"Failed to send order confirmation email: {e}")
+        raise
 
 def billing_info(request):
     if request.POST:
@@ -553,6 +500,10 @@ def payment_success(request):
 
     if request.user.is_authenticated:
         order = Order.objects.filter(user=request.user).last()
+        try:
+            send_order_confirmation_email(order)
+        except Exception as e:
+            logger.error(f"Failed to send order confirmation email: {e}")
         
         if order and hasattr(order, 'orderitem_set'):
             for item in order.orderitem_set.all():
@@ -575,3 +526,27 @@ def payment_success(request):
 
 def payment_failed(request):
     return render(request, 'payment/payment_failed.html', {})
+
+@login_required
+def order_details(request, order_id):
+    """
+    View order details for authenticated non-admin users.
+    """
+    try:
+        order = get_object_or_404(Order, id=order_id, user=request.user)
+        order_items = OrderItem.objects.filter(order=order)
+
+        context = {
+            'order': order,
+            'order_items': order_items,
+        }
+        return render(request, 'payment/order_details.html', context)
+
+    except Order.DoesNotExist:
+        messages.error(request, "Order not found or you don't have permission to view this order.")
+        return redirect('home')
+
+    except Exception as e:
+        logger.error(f"Error fetching order details: {e}")
+        messages.error(request, "An error occurred while fetching your order details.")
+        return redirect('home')

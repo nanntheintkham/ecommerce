@@ -1,0 +1,38 @@
+{% extends 'store/base.html' %}
+
+{% block content %}
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Order Details</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Track your order status</p>
+        </div>
+    </div>
+</header>
+
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Order #{{ order.id }}</h5>
+            <p><strong>Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+            <p><strong>Status:</strong> {% if order.shipped %}Shipped{% else %}Processing{% endif %}</p>
+            <p><strong>Payment Method:</strong> {{ order.payment_method }}</p>
+            <p><strong>Total Amount:</strong> {{ order.amount_paid }} HUF</p>
+            <p><strong>Shipping Address:</strong><br>{{ order.shipping_address }}</p>
+        </div>
+    </div>
+
+    <h5 class="mt-4">Order Items:</h5>
+    <ul class="list-group">
+        {% for item in order_items %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ item.product.name }} - {{ item.quantity }} x {{ item.price }} HUF
+            </li>
+        {% endfor %}
+    </ul>
+
+    <div class="mt-4 text-center">
+        <a href="{% url 'home' %}" class="btn btn-dark">Back to Home</a>
+    </div>
+</div>
+{% endblock %}

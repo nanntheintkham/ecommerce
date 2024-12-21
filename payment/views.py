@@ -362,8 +362,7 @@ def handle_completed_checkout_session(session):
                     email=shipping_email,
                     shipping_address=shipping_address,
                     amount_paid=amount_total / 100,  # Convert cents to actual currency
-                    payment_method='stripe',
-                    payment_status='completed',
+                    paid=True,
                     shipped=False
                 )
                 

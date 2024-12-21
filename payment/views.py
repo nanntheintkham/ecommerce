@@ -224,6 +224,7 @@ def create_stripe_session(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
+@csrf_exempt
 def stripe_webhook(request):
     webhook_secret = settings.STRIPE_WEBHOOK_SECRET
     payload = request.body
@@ -234,12 +235,17 @@ def stripe_webhook(request):
             payload, sig_header, webhook_secret
         )
     except ValueError as e:
+        logger.error("Invalid payload")
         return JsonResponse({'error': 'Invalid payload'}, status=400)
     except stripe.error.SignatureVerificationError as e:
+        logger.error("Invalid signature")
         return JsonResponse({'error': 'Invalid signature'}, status=400)
+
+    logger.info(f"Stripe Event Received: {event}")
 
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        logger.info(f"Stripe Checkout Session: {session}")
         handle_completed_checkout_session(session)
 
     return JsonResponse({'status': 'success'})
@@ -249,31 +255,46 @@ import logging
 logger = logging.getLogger(__name__)
 
 def handle_completed_checkout_session(session):
-    order_id = session.metadata.get('order_id')
-    user_id = session.metadata.get('user_id')
-
-    logger.info(f"Stripe Webhook Triggered: Order ID {order_id}, User ID {user_id}")
     try:
-        if user_id != 'guest':
-            user = User.objects.get(id=int(user_id))
-            order = Order.objects.create(
-                user=user,
-                invoice=order_id,
-                amount_paid=session.amount_total / 100,
-                payment_method='stripe'
-            )
-            logger.info(f"Order created for user {user.username} with amount {order.amount_paid}")
+        order_id = session.get('metadata', {}).get('order_id')
+        user_id = session.get('metadata', {}).get('user_id')
+        amount_total = session.get('amount_total')
+
+        logger.info(f"Handling Stripe Session: Order ID: {order_id}, User ID: {user_id}, Amount: {amount_total}")
+
+        if not order_id:
+            logger.error("Missing 'order_id' in session metadata.")
+            raise ValueError("Missing 'order_id' in session metadata.")
+        if not amount_total:
+            logger.error("Missing 'amount_total' in session payload.")
+            raise ValueError("Missing 'amount_total' in session payload.")
+
+        # Handle Authenticated User Order
+        if user_id and user_id != 'guest':
+            try:
+                user = User.objects.get(id=int(user_id))
+                order = Order.objects.create(
+                    user=user,
+                    invoice=order_id,
+                    amount_paid=amount_total / 100,  # Convert from cents
+                    payment_method='stripe'
+                )
+                logger.info(f"Order created for user {user.username} with amount {order.amount_paid}")
+            except User.DoesNotExist:
+                logger.error(f"User with ID {user_id} does not exist.")
         else:
+            # Handle Guest Order
             order = Order.objects.create(
                 invoice=order_id,
-                amount_paid=session.amount_total / 100,
+                amount_paid=amount_total / 100,
                 payment_method='stripe'
             )
             logger.info(f"Order created for guest with amount {order.amount_paid}")
-    except User.DoesNotExist:
-        logger.error(f"User with ID {user_id} does not exist.")
+
+    except AttributeError as ae:
+        logger.error(f"AttributeError: {str(ae)}")
     except Exception as e:
-        logger.error(f"Error processing Stripe payment: {str(e)}")
+        logger.error(f"Error in handle_completed_checkout_session: {str(e)}")
 
 
 def billing_info(request):

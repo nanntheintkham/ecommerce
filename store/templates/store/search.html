@@ -1,105 +1,180 @@
-{% extends 'store/base.html' %} {% block content %}
+{% extends 'store/base.html' %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .search-box {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .search-input {
+        padding-left: 45px;
+        height: 50px;
+        font-size: 1.1rem;
+    }
+    .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    .product-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .sale-badge {
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 1;
+    }
+    .product-image {
+        height: 200px;
+        object-fit: cover;
+    }
+    .price-block {
+        min-height: 50px;
+    }
+    .original-price {
+        color: #6c757d;
+        text-decoration: line-through;
+        font-size: 0.9rem;
+    }
+    .sale-price {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
 <!-- Header-->
 <header class="bg-dark py-5">
-  <div class="container px-4 px-lg-5 my-5">
-    <div class="text-center text-white">
-      <h1 class="display-4 fw-bolder">Search Product</h1>
-      <p class="lead fw-normal text-white-50 mb-0">
-        Search What you're looking for
-      </p>
+    <div class="container px-4 px-lg-5">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                <li class="breadcrumb-item active text-white" aria-current="page">Search</li>
+            </ol>
+        </nav>
+        <div class="text-center text-white mt-4">
+            <h1 class="display-4 fw-bolder">Find Your Perfect Product</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Discover our amazing collection</p>
+        </div>
     </div>
-  </div>
 </header>
 
-<div class="container">
-  <div class="row">
-    <center>
-      <div class="col-10">
-        </br>
-            <div class="card">
-                <div class="card-header">
-                Search Product
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{% url 'search' %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <input type="text" class="form-control" placeholder="Search for Products" name="searched">
-                        </div>
-                        <button type="submit" class="btn btn-secondary">Search Products</button> 
-                    </form>
-                </div>
+<div class="container py-5">
+    <div class="search-container">
+        <!-- Search Form -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <form method="POST" action="{% url 'search' %}" class="search-box mb-0">
+                    {% csrf_token %}
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           class="form-control form-control-lg search-input" 
+                           placeholder="Search for products..." 
+                           name="searched"
+                           value="{{ request.POST.searched }}"
+                           autocomplete="off">
+                </form>
             </div>
-        <br /><br />
-        <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
-        {% if searched %}
-            {% for product in searched %}
-                {% if product.is_sale %}
-                    
-                    <div class="col mb-5">
-                        <div class="card h-100">
-                            <!-- Sale badge-->
-                            <div class="badge bg-dark text-white position-absolute" style="top: 0.5rem; right: 0.5rem">Sale</div>
-
-                            <!-- Product image-->
-                            <img class="card-img-top" src="{{ product.image.url }}" alt="..." />
-                            <!-- Product details-->
-                            <div class="card-body p-4">
-                                <div class="text-center">
-                                    <!-- Product name-->
-                                    <h5 class="fw-bolder">{{ product.name }}</h5>
-                                    <!-- Sale -->
-                                    <div class="d-flex justify-content-center small text-warning mb-2">
-                                        <div class="bi-star-fill"></div>
-                                        &nbsp;&nbsp;Sale!&nbsp;&nbsp;
-                                        <div class="bi-star-fill"></div>
-                                    </div>
-
-                                    <!-- Product price-->
-                                    <strike>
-                                    {{ product.price }} HUF
-                                    </strike>
-                                    &nbsp;
-                                    {{ product.sale_price }} HUF
-                                </div>
-                            </div>
-                            <!-- Product actions-->
-                            <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
-                                <div class="text-center">
-                                    <a class="btn btn-outline-dark mt-auto" href="{% url 'product' product.id  %}">View Product</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                {% else %}
-                    <div class="col mb-5">
-                        <div class="card h-100">
-                            <!-- Product image-->
-                            <img class="card-img-top" src="{{ product.image.url }}" alt="{{ product.name }}" />
-                            <!-- Product details-->
-                            <div class="card-body p-4">
-                                <div class="text-center">
-                                    <!-- Product name-->
-                                    <h5 class="fw-bolder">{{ product.name }}</h5>
-                                    <!-- Product price-->
-                                    {{ product.price }} HUF
-                                </div>
-                            </div>
-                            <!-- Product actions-->
-                            <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
-                                <div class="text-center"><a class="btn btn-outline-dark mt-auto" href="{% url 'product' product.id %}">View Product</a></div>
-                            </div>
-                        </div>
-                    </div>
-
-                {% endif %}
-            {% endfor %}
-        {% endif %}
         </div>
-        <br /><br /><br /><br /><br /><br /><br /><br />
-      </div>
-    </center>
-  </div>
+
+        <!-- Search Results -->
+        {% if searched %}
+            {% if searched|length > 0 %}
+                <h4 class="mb-4">Search Results ({{ searched|length }} items)</h4>
+                <div class="row g-4">
+                    {% for product in searched %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 border-0 product-card">
+                                {% if product.is_sale %}
+                                    <div class="badge bg-danger sale-badge position-absolute">SALE</div>
+                                {% endif %}
+                                
+                                <!-- Product Image -->
+                                <img src="{{ product.image.url }}" 
+                                     class="card-img-top product-image" 
+                                     alt="{{ product.name }}">
+                                
+                                <!-- Product Details -->
+                                <div class="card-body p-4">
+                                    <h5 class="card-title fw-bold mb-3">{{ product.name }}</h5>
+                                    
+                                    <!-- Price Block -->
+                                    <div class="price-block mb-3">
+                                        {% if product.is_sale %}
+                                            <div class="original-price mb-1">{{ product.price }} HUF</div>
+                                            <div class="sale-price">{{ product.sale_price }} HUF</div>
+                                        {% else %}
+                                            <div class="fw-bold">{{ product.price }} HUF</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Action Button -->
+                                    <a href="{% url 'product' product.id %}" 
+                                       class="btn btn-dark w-100">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-results">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <h3>No Products Found</h3>
+                    <p class="text-muted">Try different keywords or browse our categories</p>
+                    <a href="{% url 'home' %}" class="btn btn-dark mt-3">
+                        <i class="fas fa-home me-2"></i>Back to Home
+                    </a>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
 </div>
+
+{% block extra_js %}
+<script>
+    // Add loading state to search form
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const button = this.querySelector('button');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Searching...';
+        }
+    });
+
+    // Lazy loading for images
+    document.addEventListener('DOMContentLoaded', function() {
+        const images = document.querySelectorAll('img[loading="lazy"]');
+        if ('loading' in HTMLImageElement.prototype) {
+            images.forEach(img => {
+                img.src = img.dataset.src;
+            });
+        } else {
+            // Fallback for browsers that don't support lazy loading
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js';
+            document.body.appendChild(script);
+        }
+    });
+</script>
+{% endblock %}
+
 {% endblock content %}

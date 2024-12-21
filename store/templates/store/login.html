@@ -3,44 +3,75 @@
 
 {% block content %}
 <header class="bg-dark py-5">
-  <div class="container px-4 px-lg-5 my-5">
-    <div class="text-center text-white">
-      <h1 class="display-4 fw-bolder">Login</h1>
-      <p class="lead fw-normal text-white-50 mb-0">Login to your account</p>
+    <div class="container px-4 px-lg-5">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                <li class="breadcrumb-item active text-white" aria-current="page">Login</li>
+            </ol>
+        </nav>
+        <div class="text-center text-white mt-4">
+            <h1 class="display-4 fw-bolder">Welcome Back</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Sign in to your account</p>
+        </div>
     </div>
-  </div>
 </header>
 
-<div class="container">
-  <div class="row">
-    <center>
-      <div class="col-8">
-        <br /><br />
-        
-        <!-- Traditional Login Form -->
-        <form method="POST" action="{% url 'login' %}">
-          {% csrf_token %}
-          <div class="mb-3">
-            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" />
-          </div>
-          <div class="mb-3">
-            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" />
-          </div>
-          <br /><br />
-          <button type="submit" class="btn btn-secondary">Login</button>
-        </form>
-        
-        <!-- Google OAuth Login -->
-        <div class="mt-4">
-          <p>Or login with:</p>
-          <a href="{% provider_login_url 'google' %}" class="btn btn-danger">
-            <i class="fab fa-google"></i> Login with Google
-          </a>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body p-4 p-lg-5">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Social Login -->
+                    <div class="text-center mb-4">
+                        <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark btn-lg w-100 mb-3">
+                            <i class="fab fa-google me-2"></i> Continue with Google
+                        </a>
+                    </div>
+
+                    <div class="position-relative my-4">
+                        <hr>
+                        <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted">or</span>
+                    </div>
+
+                    <!-- Traditional Login Form -->
+                    <form method="POST" action="{% url 'login' %}">
+                        {% csrf_token %}
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                            <label for="username">Username</label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                            <label for="password">Password</label>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label" for="remember">Remember me</label>
+                            </div>
+                            <a href="#" class="text-decoration-none">Forgot password?</a>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark btn-lg w-100">Sign In</button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="mb-0">Don't have an account? <a href="{% url 'register' %}" class="text-dark fw-bold">Register here</a></p>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <br /><br />
-      </div>
-    </center>
-  </div>
+    </div>
 </div>
 {% endblock content %}

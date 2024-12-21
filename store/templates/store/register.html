@@ -1,102 +1,183 @@
 {% extends 'store/base.html' %}
 {% load socialaccount %}
 
+{% block extra_css %}
+<style>
+    .form-floating > label {
+        z-index: 3;
+    }
+    .form-control:focus {
+        border-color: #212529;
+        box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.25);
+    }
+    .social-btn:hover {
+        background-color: #212529;
+        color: white;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .form-check-input:checked {
+        background-color: #212529;
+        border-color: #212529;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <header class="bg-dark py-5">
-    <div class="container px-4 px-lg-5 my-5">
-        <div class="text-center text-white">
-            <h1 class="display-4 fw-bolder">Register</h1>
-            <p class="lead fw-normal text-white-50 mb-0">Create your new account</p>
+    <div class="container px-4 px-lg-5">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                <li class="breadcrumb-item active text-white" aria-current="page">Register</li>
+            </ol>
+        </nav>
+        <div class="text-center text-white mt-4">
+            <h1 class="display-4 fw-bolder">Join Our Community</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Create your account to start shopping</p>
         </div>
     </div>
 </header>
 
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <!-- Social Registration Options -->
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow border-0">
+                <div class="card-body p-4 p-lg-5">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Social Registration -->
                     <div class="text-center mb-4">
-                        <p class="text-muted mb-3">Quick registration with</p>
-                        <a href="{% provider_login_url 'google' %}" class="btn btn-outline-danger btn-lg w-100">
+                        <a href="{% provider_login_url 'google' %}" 
+                           class="btn btn-outline-dark btn-lg w-100 social-btn d-flex align-items-center justify-content-center">
                             <i class="fab fa-google me-2"></i> Continue with Google
                         </a>
                     </div>
 
                     <div class="position-relative my-4">
-                        <hr>
+                        <hr class="text-muted">
                         <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted">or</span>
                     </div>
 
-                    <!-- Traditional Registration Form -->
-                    <form method="POST" action="{% url 'register' %}">
+                    <!-- Registration Form -->
+                    <form method="POST" action="{% url 'register' %}" class="needs-validation" novalidate>
                         {% csrf_token %}
-                        
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+                        <!-- Name Fields -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.first_name }}
+                                    <label for="{{ form.first_name.id_for_label }}">First Name</label>
                                 </div>
-                            {% endfor %}
-                        {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.last_name }}
+                                    <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div class="mb-3">
+                        <!-- Username Field -->
+                        <div class="form-floating mb-3">
                             {{ form.username }}
-                            {{ form.username.help_text|safe }}
+                            <label for="{{ form.username.id_for_label }}">Username</label>
+                            {% if form.username.help_text %}
+                                <div class="help-text mt-1">{{ form.username.help_text|safe }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="mb-3">
+                        <!-- Email Field -->
+                        <div class="form-floating mb-3">
                             {{ form.email }}
+                            <label for="{{ form.email.id_for_label }}">Email Address</label>
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.first_name }}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.last_name }}
-                        </div>
-
-                        <div class="mb-3">
+                        <!-- Password Fields -->
+                        <div class="form-floating mb-3">
                             {{ form.password1 }}
-                            {{ form.password1.help_text|safe }}
+                            <label for="{{ form.password1.id_for_label }}">Password</label>
+                            {% if form.password1.help_text %}
+                                <div class="help-text mt-1">{{ form.password1.help_text|safe }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="mb-3">
+                        <div class="form-floating mb-4">
                             {{ form.password2 }}
-                            {{ form.password2.help_text|safe }}
+                            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
                         </div>
 
+                        <!-- Error Messages -->
                         {% if form.errors %}
                             {% for field in form %}
                                 {% for error in field.errors %}
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
                                         {{ error }}
                                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                     </div>
                                 {% endfor %}
                             {% endfor %}
-                            {% for error in form.non_field_errors %}
-                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                    {{ error }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
                         {% endif %}
 
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
-                        </div>
+                        {% comment %} <!-- Terms Checkbox -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="terms" required>
+                            <label class="form-check-label" for="terms">
+                                I agree to the <a href="#" class="text-dark">Terms of Service</a> and 
+                                <a href="#" class="text-dark">Privacy Policy</a>
+                            </label>
+                        </div> {% endcomment %}
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-dark btn-lg w-100">Create Account</button>
                     </form>
 
+                    <!-- Login Link -->
                     <div class="text-center mt-4">
-                        <p class="mb-0">Already have an account? <a href="{% url 'login' %}" class="text-primary">Login here</a></p>
+                        <p class="mb-0">Already have an account? 
+                            <a href="{% url 'login' %}" class="text-dark fw-bold text-decoration-none">Sign in</a>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+    // Form validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+
+    // Password strength indicator (optional)
+    document.getElementById('{{ form.password1.id_for_label }}').addEventListener('input', function(e) {
+        // Add password strength logic here if needed
+    });
+</script>
+{% endblock %}
+
 {% endblock content %}

@@ -63,20 +63,21 @@
                     </div>
                 </div>
                 <br/>
+                <h3>Payment Methods</h3>
+            
+            <!-- PayPal Button -->
+            <div class="payment-option mb-4">
+                <h4>Pay with PayPal</h4>
                 {{ paypal_form.render }}
-                <br/><br/>
-                <div class="card">
-                    <div class="card-header">
-                    
-                    Billing Info
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="{% url 'process_order' %}">
-                            {% csrf_token %}
-                            {{ billing_info.as_p }}
-                        
-                    </div>
-                </div>
+            </div>
+
+            <!-- Stripe Button -->
+            <div class="payment-option">
+                <h4>Pay with Card</h4>
+                <button id="stripe-button" class="btn btn-primary">
+                    Pay with Card
+                </button>
+            </div>
                 <br/>
 
                 <button type="submit" class="btn btn-dark">Pay Now</button>
@@ -86,6 +87,40 @@
             
         </div>
     </div>
-
+    <script>
+    // Initialize Stripe
+    const stripe = Stripe('{{ stripe_data.publishable_key }}');
+    
+    // Handle Stripe payment
+    document.getElementById('stripe-button').addEventListener('click', async () => {
+        try {
+            const response = await fetch('{% url "create_checkout_session" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+            
+            const session = await response.json();
+            
+            if (session.error) {
+                console.error('Error:', session.error);
+                return;
+            }
+            
+            // Redirect to Stripe Checkout
+            const result = await stripe.redirectToCheckout({
+                sessionId: session.sessionId
+            });
+            
+            if (result.error) {
+                console.error('Error:', result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+</script>
 
 {% endblock %}

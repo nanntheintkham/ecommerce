@@ -10,6 +10,7 @@ from django.urls import reverse
 from paypal.standard.forms import PayPalPaymentsForm
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 import uuid
 import datetime
 import stripe
@@ -176,25 +177,95 @@ def process_order(request):
         messages.error(request, "Access denied!")
         return redirect('home')
 
-def stripe_payment_view(request):
-    if request.POST:
-        # Get the token from the request
-        token = request.POST['stripeToken']
-
+def create_stripe_session(request):
+    if request.method == 'POST':
         try:
-            # Create a charge using the token
-            charge = stripe.Charge.create(
-                amount=int(request.POST['amount'] * 100),  # amount in cents
-                currency='HUF',
-                description='Example charge',
-                source=token,
+            cart = Cart(request)
+            cart_products = cart.get_prods
+            totals = cart.cart_total()
+            
+            # Create line items for Stripe
+            line_items = []
+            for product in cart_products():
+                price = product.sale_price if product.is_sale else product.price
+                line_items.append({
+                    'price_data': {
+                        'currency': 'huf',
+                        'product_data': {
+                            'name': product.name,
+                            'images': [request.build_absolute_uri(product.image.url)] if product.image else [],
+                        },
+                        'unit_amount': int(price * 100),  # Convert to cents
+                    },
+                    'quantity': cart.get_quants()[str(product.id)],
+                })
+
+            # Create Stripe checkout session
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=line_items,
+                mode='payment',
+                success_url=request.build_absolute_uri(reverse('payment_success')),
+                cancel_url=request.build_absolute_uri(reverse('payment_failed')),
+                metadata={
+                    'order_id': str(uuid.uuid4()),  # Generate unique order ID
+                    'user_id': str(request.user.id) if request.user.is_authenticated else 'guest'
+                }
             )
-            return JsonResponse({"message": "Payment successful!"})
-        except stripe.error.CardError as e:
-            return JsonResponse({"error": str(e)})
-        return render(request, "payment/stripe_payment.html", {
-        'STRIPE_PUBLIC_KEY': settings.STRIPE_PUBLIC_KEY
-    })
+            
+            return JsonResponse({'sessionId': checkout_session.id})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def stripe_webhook(request):
+    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except ValueError as e:
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return JsonResponse({'error': 'Invalid signature'}, status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        handle_completed_checkout_session(session)
+
+    return JsonResponse({'status': 'success'})
+
+def handle_completed_checkout_session(session):
+    # Get order metadata
+    order_id = session.metadata.get('order_id')
+    user_id = session.metadata.get('user_id')
+
+    try:
+        # Create order in your database
+        if user_id != 'guest':
+            user = User.objects.get(id=int(user_id))
+            order = Order.objects.create(
+                user=user,
+                invoice=order_id,
+                amount_paid=session.amount_total / 100,  # Convert from cents
+                payment_method='stripe'
+            )
+        else:
+            order = Order.objects.create(
+                invoice=order_id,
+                amount_paid=session.amount_total / 100,
+                payment_method='stripe'
+            )
+
+        # Additional order processing...
+
+    except Exception as e:
+        # Log the error
+        print(f"Error processing Stripe payment: {str(e)}")
 
 def billing_info(request):
     if request.POST:
@@ -207,94 +278,41 @@ def billing_info(request):
         shipping_data = request.POST
         request.session['shipping_data'] = shipping_data 
 
-         # Get Order info
-        full_name = shipping_data['shipping_fullname']
-        email = shipping_data['shipping_email']
-
-        # Get shipping address from session info
-        shipping_address = f"{shipping_data['shipping_address1']}\n{shipping_data['shipping_address2']}\n{shipping_data['shipping_city']}\n{shipping_data['shipping_state']}\n{shipping_data['shipping_zipcode']}\n{shipping_data['shipping_country']}"
-        amount_paid = totals
-
         host = request.get_host()
-        # Create Invoice number 
         my_invoice = str(uuid.uuid4())
 
-        # Create Order
-
-        # Create Paypal form
+        # PayPal configuration
         paypal_dict = {
             'business': settings.PAYPAL_RECEIVER_EMAIL,
             'amount': totals,
             'item_name': 'Shopping Cart',
-            'no_shipping': '2',
             'invoice': my_invoice,
             'currency_code': 'HUF',
-            'notify_url': 'https://{}{}'.format(host, reverse("paypal-ipn")),
-            'return_url': 'https://{}{}'.format(host, reverse("payment_success")),
-            'cancel_return': 'https://{}{}'.format(host, reverse("payment_failed")),
-            
+            'notify_url': f'https://{host}{reverse("paypal-ipn")}',
+            'return_url': f'https://{host}{reverse("payment_success")}',
+            'cancel_return': f'https://{host}{reverse("payment_failed")}',
         }
 
-        
-
         paypal_form = PayPalPaymentsForm(initial=paypal_dict)
-        # Check to see if user is logged in
-        if request.user.is_authenticated:
-			# Get The Billing Form
-            billing_form = PaymentForm()
-            # logged in
-            user = request.user
-            create_order = Order(user=user, full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid, invoice=my_invoice)
-            create_order.save()
 
-            # Add order items
-            order_id = create_order.pk
-            # Get product information
-            for product in cart_products():
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.price
-                
-                for key, value in quantities().items():
-                    if int(key) == product_id:
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
-                        create_order_item.save()
+        # Prepare Stripe data
+        stripe_data = {
+            'publishable_key': settings.STRIPE_PUBLIC_KEY,
+            'total_amount': int(totals * 100),  # Convert to cents
+            'currency': 'huf',
+        }
 
-            
-            # Delete Cart from db
-            current_user = Profile.objects.filter(user__id=request.user.id)
-            current_user.update(old_cart="")
-            return render(request, "payment/billing_info.html", {"paypal_form":paypal_form, "cart_products":cart_products, "quantities":quantities, "totals":totals, "shipping_info":request.POST, "billing_info":billing_form})
-                    
-        else:
-            billing_form = PayPalPaymentsForm(initial=paypal_dict)
-            # guest user
-            create_order = Order(full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid, invoice=my_invoice)
-            create_order.save()
+        context = {
+            'paypal_form': paypal_form,
+            'cart_products': cart_products,
+            'quantities': quantities,
+            'totals': totals,
+            'shipping_info': request.POST,
+            'stripe_data': stripe_data,
+        }
 
-            # Add order items
-            order_id = create_order.pk
-            # Get product information
-            for product in cart_products():
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.price
-                
-                for key, value in quantities().items():
-                    if int(key) == product_id:
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, quantity=value, price=price)
-                        create_order_item.save()
+        return render(request, "payment/billing_info.html", context)
 
-            return render(request, "payment/billing_info.html", {"paypal_form":paypal_form, "cart_products":cart_products, "quantities":quantities, "totals":totals, "shipping_info":request.POST, "billing_info":billing_form})
-
-
-		
-        # shipping_form = request.POST
-        # return render(request, "payment/billing_info.html", {"cart_products":cart_products, "quantities":quantities, "totals":totals, "shipping_form":shipping_form})	
     else:
         messages.error(request, "Access denied!")
         return redirect('home')

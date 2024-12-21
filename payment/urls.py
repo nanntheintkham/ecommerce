@@ -1,3 +1,5 @@
+# payment/urls.py
+
 from django.urls import path, include
 from . import views
 
@@ -12,5 +14,7 @@ urlpatterns = [
     path('processing_dash/', views.processing_dash, name='processing_dash'),
     path('orders/<int:pk>', views.orders, name='orders'),
     path('paypal/', include("paypal.standard.ipn.urls")),
-    path('stripe/', views.stripe_payment_view, name='stripe_payment'),
+    # Stripe endpoints
+    path('create-checkout-session/', views.create_stripe_session, name='create_checkout_session'),
+    path('stripe-webhook/', views.stripe_webhook, name='stripe_webhook'),
 ]

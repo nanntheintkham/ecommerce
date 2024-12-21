@@ -1,136 +1,196 @@
 {% extends 'store/base.html' %}
+{% load static %}
 
-{% block extra_css %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    .payment-method-container {
-        margin: 20px 0;
-        padding: 20px;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-    }
-    .payment-button {
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-    }
-    .stripe-button-container {
-        margin-top: 15px;
-    }
+/* Add to your custom.css if needed */
+.payment-option {
+    transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.payment-cards img {
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.payment-option:hover .payment-cards img {
+    opacity: 1;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-    <!-- Header-->
-    <header class="bg-dark py-5">
-        <div class="container px-4 px-lg-5 my-5">
-            <div class="text-center text-white">
-                <h1 class="display-4 fw-bolder">Payment</h1>
-                <p class="lead fw-normal text-white-50 mb-0">Choose your payment method</p>
-            </div>
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Secure Checkout</h1>
+            <p class="lead fw-normal text-white-50 mb-0">
+                Complete your purchase securely with our trusted payment partners
+            </p>
         </div>
-    </header>
+    </div>
+</header>
 
-    <div class="container py-5">
-        <div class="row">
-            <div class="col-md-6 offset-md-3">
-                <!-- Order Summary Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Order Summary</h5>
+<!-- Checkout Section -->
+<section class="py-5">
+    <div class="container px-4 px-lg-5">
+        <div class="row gx-4 gx-lg-5">
+            <!-- Payment Methods Column -->
+            <div class="col-lg-8 mb-5">
+                <div class="card h-100">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0 fw-bolder">Choose Payment Method</h5>
                     </div>
-                    <div class="card-body">
-                        {% for product in cart_products %}
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <h6 class="mb-0">{{ product.name }}</h6>
-                                    <small>Quantity: 
-                                        {% for key, value in quantities.items %}
-                                            {% if key == product.id|slugify %}
-                                                {{ value }}
-                                            {% endif %}
-                                        {% endfor %}
-                                    </small>
+                    <div class="card-body p-4">
+                        <!-- Stripe Payment Option -->
+                        <div class="payment-option mb-4 p-4 border rounded">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="bi bi-credit-card-2-front fs-2 text-primary"></i>
                                 </div>
-                                <div>
-                                    {% if product.is_sale %}
-                                        {{ product.sale_price }} HUF
-                                    {% else %}
-                                        {{ product.price }} HUF
-                                    {% endif %}
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bolder mb-1">Credit or Debit Card</h5>
+                                    <p class="text-muted mb-2">Safe and secure payment with Stripe</p>
+                                    <div class="payment-cards">
+                                        <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" height="25">
+                                        <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" height="25">
+                                        <img src="https://img.icons8.com/color/48/000000/amex.png" alt="American Express" height="25">
+                                    </div>
                                 </div>
                             </div>
-                        {% endfor %}
-                        <hr>
-                        <div class="d-flex justify-content-between">
-                            <h5>Total:</h5>
-                            <h5>{{ totals }} HUF</h5>
+                            <button id="stripe-button" class="btn btn-dark w-100 mt-3">
+                                <i class="bi bi-lock me-2"></i>Pay Securely
+                            </button>
+                        </div>
+
+                        <!-- PayPal Payment Option -->
+                        <div class="payment-option p-4 border rounded">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="bi bi-paypal fs-2 text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bolder mb-1">PayPal</h5>
+                                    <p class="text-muted mb-2">Pay with your PayPal account</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                {{ paypal_form.render }}
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Payment Methods -->
-                <div class="payment-method-container">
-                    <h5 class="mb-4">Select Payment Method</h5>
-                    
-                    <!-- PayPal Button -->
-                    <div class="mb-4">
-                        {{ paypal_form.render }}
+            <!-- Order Summary Column -->
+            <div class="col-lg-4 mb-5">
+                <div class="card h-100">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0 fw-bolder">Order Summary</h5>
                     </div>
-
-                    <!-- Stripe Button -->
-                    <div class="stripe-button-container">
-                        <button id="stripe-button" class="btn btn-dark payment-button">
-                            <i class="fas fa-credit-card me-2"></i>Pay with Card
-                        </button>
+                    <div class="card-body p-4">
+                        {% for product in cart_products %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bolder mb-1">{{ product.name }}</h6>
+                                <small class="text-muted">
+                                    Quantity: 
+                                    {% for key, value in quantities.items %}
+                                        {% if key == product.id|slugify %}
+                                            {{ value }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% if product.is_sale %}
+                                    <div class="badge bg-dark text-white mb-1">SALE</div>
+                                    <div>{{ product.sale_price }} HUF</div>
+                                {% else %}
+                                    <div>{{ product.price }} HUF</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if not forloop.last %}
+                        <hr class="my-3">
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer bg-light p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bolder mb-0">Total:</h5>
+                            <h5 class="fw-bolder mb-0">{{ totals }} HUF</h5>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Stripe Scripts -->
-    <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        // Initialize Stripe
-        const stripe = Stripe('{{ stripe_data.publishable_key }}');
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" 
+     style="background: rgba(255,255,255,0.8); z-index: 9999;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    // Initialize Stripe
+    const stripe = Stripe('{{ stripe_data.publishable_key }}');
+    
+    // Handle Stripe payment
+    document.getElementById('stripe-button').addEventListener('click', async () => {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const button = document.getElementById('stripe-button');
         
-        // Handle Stripe payment
-        document.getElementById('stripe-button').addEventListener('click', async () => {
-    try {
-        const button = document.getElementById('stripe-button');
-        button.disabled = true;
-        button.innerHTML = 'Processing...';
+        try {
+            loadingOverlay.classList.remove('d-none');
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
 
-        const response = await fetch('{% url "create_checkout_session" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+            const response = await fetch('{% url "create_checkout_session" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
             }
-        });
 
-        const data = await response.json();
+            const result = await stripe.redirectToCheckout({
+                sessionId: data.sessionId
+            });
 
-        if (data.error) {
-            throw new Error(data.error);
+            if (result.error) {
+                throw new Error(result.error.message);
+            }
+        } catch (error) {
+            console.error('Payment failed:', error);
+            alert('Error: ' + error.message);
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-lock me-2"></i>Pay Securely';
+        } finally {
+            loadingOverlay.classList.add('d-none');
         }
-
-        const result = await stripe.redirectToCheckout({
-            sessionId: data.sessionId
-        });
-
-        if (result.error) {
-            throw new Error(result.error.message);
-        }
-    } catch (error) {
-        console.error('Payment failed:', error);
-        alert('Error: ' + error.message);
-
-        const button = document.getElementById('stripe-button');
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pay with Card';
-    }
-});
-
-    </script>
+    });
+</script>
 {% endblock %}

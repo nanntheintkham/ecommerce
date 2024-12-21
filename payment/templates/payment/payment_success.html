@@ -1,55 +1,68 @@
 {% extends 'store/base.html' %}
+{% load static %}
 
 {% block content %}
 <!-- Header-->
 <header class="bg-dark py-5">
     <div class="container px-4 px-lg-5 my-5">
         <div class="text-center text-white">
-            <h1 class="display-4 fw-bolder">Payment Success!</h1>
-            <p class="lead fw-normal text-white-50 mb-0">Your order is complete</p>
+            <h1 class="display-4 fw-bolder">Payment Successful!</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Thank you for your purchase</p>
         </div>
     </div>
 </header>
-<br />
-<div class="container">
-    <div class="row">
-        <div class="col-md-6 offset-md-3">
-            <br /><br />
-            <div class="row">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Payment Successful!</h5>
-                            <p class="card-text">Thank you for your purchase!</p>
-                            
-                            {% if order %}
-                                <p>Your order has been placed successfully.</p>
-                                <p><strong>Total Amount Paid:</strong> {{ order.amount_paid }} HUF</p>
-                            {% endif %}
-                            
-                            {% if digital_products_with_urls %}
-    <hr>
-    <h5>Your Digital Products:</h5>
-    <ul>
-        {% for item in digital_products_with_urls %}
-            <li>
-                {{ item.product.name }}: 
-                {% if item.stream_url %}
-                    <a href="{{ item.stream_url }}" class="btn btn-primary btn-sm">Access Product</a>
-                {% else %}
-                    <span>No streaming link available</span>
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
-{% endif %}
 
-                            
-                            <br>
-                            <a href="{% url 'home' %}" class="btn btn-primary">Continue Shopping</a>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h2 class="fw-bold mb-3">Order Confirmed</h2>
+                    <p class="text-muted mb-4">Your order has been successfully processed and confirmed.</p>
+                    
+                    <!-- Order Details -->
+                    <div class="bg-light p-4 rounded-3 mb-4">
+                        <div class="row text-start mb-3">
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-1">Order Number</p>
+                                <p class="fw-bold">#{{ order.id }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-1">Order Date</p>
+                                <p class="fw-bold">{{ order.created_at|date:"F d, Y" }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-start">
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-1">Total Amount</p>
+                                <p class="fw-bold">{{ order.total }} HUF</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-1">Payment Method</p>
+                                <p class="fw-bold">{{ order.payment_method }}</p>
+                            </div>
                         </div>
                     </div>
-                    <br /><br /><br />
+
+                    <!-- Next Steps -->
+                    <div class="text-muted mb-4">
+                        <p>A confirmation email has been sent to your email address.</p>
+                        <p class="mb-0">You can track your order status in your <a href="{% url 'orders' %}" class="text-decoration-none">order history</a>.</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                        <a href="{% url 'home' %}" class="btn btn-dark btn-lg px-4">
+                            <i class="bi bi-house me-2"></i>Return to Home
+                        </a>
+                        <a href="{% url 'orders' %}" class="btn btn-outline-dark btn-lg px-4">
+                            <i class="bi bi-box me-2"></i>View Orders
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

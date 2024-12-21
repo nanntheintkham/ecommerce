@@ -1,69 +1,236 @@
 {% extends 'store/base.html' %}
-
+{% load static %}
 
 {% block content %}
-
     <!-- Header-->
     <header class="bg-dark py-5">
         <div class="container px-4 px-lg-5 my-5">
             <div class="text-center text-white">
                 <h1 class="display-4 fw-bolder">Checkout</h1>
-                <p class="lead fw-normal text-white-50 mb-0">Review Your Order</p>
+                <p class="lead fw-normal text-white-50 mb-0">Complete your purchase</p>
+            </div>
+            <!-- Checkout Steps -->
+            <div class="mt-4">
+                <div class="checkout-steps d-flex justify-content-center">
+                    <div class="step completed">
+                        <div class="step-icon">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                        <div class="step-text">Cart</div>
+                    </div>
+                    <div class="step active">
+                        <div class="step-icon">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <div class="step-text">Shipping</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="bi bi-credit-card"></i>
+                        </div>
+                        <div class="step-text">Payment</div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
-    <br/>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 offset-md-3">
-                <div class="card">
-                    <div class="card-header">
-                        Order Summary
+
+    <section class="py-5">
+        <div class="container px-4 px-lg-5">
+            <div class="row gx-5">
+                <!-- Left Column - Shipping Form -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-dark text-white py-3">
+                            <h5 class="fw-bolder mb-0">
+                                <i class="bi bi-truck me-2"></i>
+                                Shipping Details
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form method="post" action="{% url 'billing_info' %}" class="shipping-form">
+                                {% csrf_token %}
+                                <div class="row">
+                                    {% for field in shipping_form %}
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ field.id_for_label }}" class="form-label fw-bold">
+                                                {{ field.label }}
+                                                {% if field.field.required %}
+                                                    <span class="text-danger">*</span>
+                                                {% endif %}
+                                            </label>
+                                            {% if field.field.widget.input_type == 'select' %}
+                                                <select name="{{ field.name }}" class="form-select" id="{{ field.id_for_label }}">
+                                                    {{ field }}
+                                                </select>
+                                            {% else %}
+                                                <input type="{{ field.field.widget.input_type }}" 
+                                                       name="{{ field.name }}"
+                                                       id="{{ field.id_for_label }}"
+                                                       class="form-control"
+                                                       placeholder="{{ field.label }}"
+                                                       {% if field.value %}value="{{ field.value }}"{% endif %}
+                                                       {% if field.field.required %}required{% endif %}>
+                                            {% endif %}
+                                            {% if field.help_text %}
+                                                <div class="form-text">{{ field.help_text }}</div>
+                                            {% endif %}
+                                            {% if field.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ field.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-dark btn-lg w-100">
+                                        Continue to Payment
+                                        <i class="bi bi-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        {% for product in cart_products %}
-                            {{ product.name }} - 
-                            {% if product.is_sale %} 
-                                {{ product.sale_price }} HUF 
-                            {% else %} 
-                                {{ product.price }} HUF 
-                            {% endif %}
-                            <br/>
-                            <small>Quantity - 
-                            {% for key, value in quantities.items %}
-                                {% if key == product.id|slugify %}
-                                    {{ value }}
+                </div>
+
+                <!-- Right Column - Order Summary -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white py-3">
+                            <h5 class="fw-bolder mb-0">
+                                <i class="bi bi-bag-check me-2"></i>
+                                Order Summary
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Products List -->
+                            {% for product in cart_products %}
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="fw-bold mb-1">{{ product.name }}</h6>
+                                        <span class="text-muted small">
+                                            Qty: 
+                                            {% for key, value in quantities.items %}
+                                                {% if key == product.id|slugify %}
+                                                    {{ value }}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if product.is_sale %}
+                                            <span class="badge bg-danger mb-1">Sale</span>
+                                            <div class="fw-bold">{{ product.sale_price }} HUF</div>
+                                        {% else %}
+                                            <div class="fw-bold">{{ product.price }} HUF</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}
+                                    <hr class="my-3">
                                 {% endif %}
-                            {% endfor %}</small>
-                            <br/><br/>
-                        {% endfor %}
-                        <hr/>
-                        Total: {{ totals }} HUF
-                        <br/><br/>
-                        <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+                            {% endfor %}
+
+                            <!-- Total Section -->
+                            <div class="mt-4 pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="h5 fw-bold mb-0">Total:</span>
+                                    <span class="h5 fw-bold mb-0">{{ totals }} HUF</span>
+                                </div>
+                                <a href="{% url 'cart_summary' %}" class="btn btn-outline-dark btn-sm w-100">
+                                    <i class="bi bi-pencil me-2"></i>
+                                    Update Cart
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <div class="card mt-3 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center text-muted">
+                                <i class="bi bi-shield-check fs-4 me-2"></i>
+                                <small>Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our privacy policy.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <br/><br/>
-
-                <div class="card">
-                    <div class="card-header">
-                    Shipping Info
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="{% url 'billing_info' %}">
-                            {% csrf_token %}
-                            {{ shipping_form.as_p }}
-                    </div>
-                </div>
-                <br/>
-
-                <button type="submit" class="btn btn-secondary">Continue to billing</button>
-                </form>
-                <br/><br/>
             </div>
-            
         </div>
-    </div>
+    </section>
+{% endblock %}
 
+{% block head %}
+<style>
+    /* Checkout Steps */
+    .checkout-steps {
+        padding: 20px 0;
+    }
 
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 25px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.3);
+        z-index: 0;
+    }
+
+    .step-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .step.completed .step-icon,
+    .step.active .step-icon {
+        background: #28a745;
+        color: white;
+    }
+
+    .step.completed:after {
+        background: #28a745;
+    }
+
+    .step.active {
+        color: white;
+    }
+
+    .step-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Form Styling */
+    .form-control:focus {
+        border-color: #212529;
+        box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.25);
+    }
+
+    /* Card Hover Effect */
+    .card {
+        transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+</style>
 {% endblock %}

@@ -1,4 +1,7 @@
 from store.models import Product, Profile
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Cart():
 	def __init__(self, request):
@@ -84,20 +87,16 @@ class Cart():
 		return quantities
 
 	def update(self, product, quantity):
-		product_id = str(product)
+		product_id = str(product.id)  # Ensure product.id is used
 		product_qty = int(quantity)
 
-		# Get cart
-		ourcart = self.cart
-		# Update Dictionary/cart
-		ourcart[product_id] = product_qty
+		if product_id in self.cart:
+			self.cart[product_id] = product_qty
+		else:
+			raise ValueError("Product not found in cart.")
 
 		self.session.modified = True
-	
-
-		# Deal with logged in user
 		logged_in_cart(self)
-
 
 		thing = self.cart
 		return thing
@@ -114,13 +113,10 @@ class Cart():
 		logged_in_cart(self)
 
 def logged_in_cart(self):
-		# Deal with logged in user
-		if self.request.user.is_authenticated:
-			# Get the current user profile
-			current_user = Profile.objects.filter(user__id=self.request.user.id)
-			# Convert '' to ""
-			carty = str(self.cart)
-			carty = carty.replace("\'", "\"")
-
-			# Save carty to Profile model
-			current_user.update(old_cart=str(carty))
+    if self.request.user.is_authenticated:
+        try:
+            current_user = Profile.objects.filter(user__id=self.request.user.id)
+            carty = str(self.cart).replace("\'", "\"")
+            current_user.update(old_cart=str(carty))
+        except Exception as e:
+            logger.error(f"Error saving cart to user profile: {e}")

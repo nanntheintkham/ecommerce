@@ -15,6 +15,7 @@ import uuid
 import datetime
 import stripe
 import logging
+import json
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -181,49 +182,109 @@ def process_order(request):
 logger = logging.getLogger(__name__)
 
 def create_stripe_session(request):
-    logger.info("Stripe checkout session started")  # Add this line
+    logger.info("Stripe checkout session started")
     if request.method == 'POST':
         try:
+            # Initialize cart
             cart = Cart(request)
             cart_products = cart.get_prods
             totals = cart.cart_total()
             
+            # Get shipping data from session
+            shipping_data = request.session.get('shipping_data', {})
+            
             # Create line items for Stripe
             line_items = []
+            cart_items_data = []  # Store cart items for metadata
+            
             for product in cart_products():
                 price = product.sale_price if product.is_sale else product.price
+                quantity = cart.get_quants().get(str(product.id), 0)
+                
+                # Add to line items for Stripe checkout
                 line_items.append({
                     'price_data': {
                         'currency': 'huf',
                         'product_data': {
                             'name': product.name,
-                            
+                            'description': getattr(product, 'description', None),  # Add description if available
+                            'metadata': {
+                                'product_id': product.id,
+                                'product_type': getattr(product, 'product_type', 'physical')
+                            }
                         },
                         'unit_amount': int(price * 100),  # Convert to cents
                     },
-                    'quantity': cart.get_quants()[str(product.id)],
+                    'quantity': quantity,
+                })
+                
+                # Add to cart items data for metadata
+                cart_items_data.append({
+                    'product_id': str(product.id),
+                    'quantity': quantity,
+                    'price': float(price),
+                    'product_type': getattr(product, 'product_type', 'physical')
                 })
 
+            # Create metadata with all necessary information
+            metadata = {
+                'order_id': str(uuid.uuid4()),
+                'user_id': str(request.user.id) if request.user.is_authenticated else 'guest',
+                'shipping_fullname': shipping_data.get('shipping_fullname', ''),
+                'shipping_email': shipping_data.get('shipping_email', ''),
+                'shipping_address1': shipping_data.get('shipping_address1', ''),
+                'shipping_address2': shipping_data.get('shipping_address2', ''),
+                'shipping_city': shipping_data.get('shipping_city', ''),
+                'shipping_state': shipping_data.get('shipping_state', ''),
+                'shipping_zipcode': shipping_data.get('shipping_zipcode', ''),
+                'cart_items': json.dumps(cart_items_data),
+                'total_amount': str(totals)
+            }
+
+            # Create Stripe checkout session
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
                 success_url=request.build_absolute_uri(reverse('payment_success')),
                 cancel_url=request.build_absolute_uri(reverse('payment_failed')),
-                metadata={
-                    'order_id': str(uuid.uuid4()),
-                    'user_id': str(request.user.id) if request.user.is_authenticated else 'guest'
-                }
+                metadata=metadata,
+                customer_email=shipping_data.get('shipping_email'),  # Pre-fill customer email if available
+                shipping_address_collection={
+                    'allowed_countries': ['HU'],  # Adjust countries as needed
+                },
+                payment_intent_data={
+                    'metadata': metadata,  # Include metadata in payment intent for webhook processing
+                },
             )
             
-            logger.info("Stripe session created successfully")
-            return JsonResponse({'sessionId': checkout_session.id})
+            logger.info(f"Stripe session created successfully: {checkout_session.id}")
+            return JsonResponse({
+                'sessionId': checkout_session.id,
+                'success': True
+            })
+            
+        except stripe.error.StripeError as e:
+            # Handle Stripe-specific errors
+            logger.error(f"Stripe error: {str(e)}")
+            return JsonResponse({
+                'error': 'Payment service error. Please try again later.',
+                'details': str(e)
+            }, status=400)
+            
         except Exception as e:
-            logger.error(f"Error in Stripe session: {e}")
-            return JsonResponse({'error': str(e)}, status=400)
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+            # Handle any other unexpected errors
+            logger.error(f"Unexpected error in create_stripe_session: {str(e)}")
+            return JsonResponse({
+                'error': 'An unexpected error occurred. Please try again later.',
+                'details': str(e)
+            }, status=500)
+    
+    # Handle non-POST requests
+    return JsonResponse({
+        'error': 'Invalid request method. Only POST requests are allowed.'
+    }, status=405)
 
-@csrf_exempt
 @csrf_exempt
 def stripe_webhook(request):
     webhook_secret = settings.STRIPE_WEBHOOK_SECRET
@@ -255,46 +316,148 @@ import logging
 logger = logging.getLogger(__name__)
 
 def handle_completed_checkout_session(session):
+    """
+    Handle the completed checkout session from Stripe webhook
+    Creates order and order items in the database
+    """
+    logger.info("Starting to handle completed checkout session")
+    
     try:
-        order_id = session.get('metadata', {}).get('order_id')
-        user_id = session.get('metadata', {}).get('user_id')
-        amount_total = session.get('amount_total')
+        # Get metadata from the session
+        metadata = session.metadata
+        if not metadata:
+            raise ValueError("No metadata found in session")
 
-        logger.info(f"Handling Stripe Session: Order ID: {order_id}, User ID: {user_id}, Amount: {amount_total}")
+        order_id = metadata.get('order_id')
+        user_id = metadata.get('user_id')
+        amount_total = session.amount_total  # Amount in cents
+        
+        # Get shipping details from metadata
+        shipping_fullname = metadata.get('shipping_fullname')
+        shipping_email = metadata.get('shipping_email')
+        shipping_address = (
+            f"{metadata.get('shipping_address1', '')}\n"
+            f"{metadata.get('shipping_address2', '')}\n"
+            f"{metadata.get('shipping_city', '')}\n"
+            f"{metadata.get('shipping_state', '')}\n"
+            f"{metadata.get('shipping_zipcode', '')}"
+        ).strip()
 
-        if not order_id:
-            logger.error("Missing 'order_id' in session metadata.")
-            raise ValueError("Missing 'order_id' in session metadata.")
-        if not amount_total:
-            logger.error("Missing 'amount_total' in session payload.")
-            raise ValueError("Missing 'amount_total' in session payload.")
+        # Parse cart items from metadata
+        try:
+            cart_items = json.loads(metadata.get('cart_items', '[]'))
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding cart items: {e}")
+            cart_items = []
 
-        # Handle Authenticated User Order
+        # Create order based on user type (authenticated or guest)
         if user_id and user_id != 'guest':
             try:
                 user = User.objects.get(id=int(user_id))
+                # Create order for authenticated user
                 order = Order.objects.create(
                     user=user,
                     invoice=order_id,
-                    amount_paid=amount_total / 100,  # Convert from cents
-                    payment_method='stripe'
+                    full_name=shipping_fullname,
+                    email=shipping_email,
+                    shipping_address=shipping_address,
+                    amount_paid=amount_total / 100,  # Convert cents to actual currency
+                    payment_method='stripe',
+                    payment_status='completed',
+                    shipped=False
                 )
-                logger.info(f"Order created for user {user.username} with amount {order.amount_paid}")
+                
+                # Create order items
+                for item in cart_items:
+                    try:
+                        product = Product.objects.get(id=item['product_id'])
+                        order_item = OrderItem.objects.create(
+                            order=order,
+                            product=product,
+                            user=user,
+                            quantity=item['quantity'],
+                            price=item['price']
+                        )
+                        
+                        # Handle digital products
+                        if item.get('product_type') == 'digital' or getattr(product, 'product_type', '') == 'digital':
+                            UserDigitalPurchase.objects.get_or_create(
+                                user=user,
+                                digital_product=product
+                            )
+                            
+                        # Update product inventory if needed
+                        if hasattr(product, 'quantity'):
+                            new_quantity = product.quantity - item['quantity']
+                            if new_quantity >= 0:
+                                product.quantity = new_quantity
+                                product.save()
+                            else:
+                                logger.warning(f"Insufficient inventory for product {product.id}")
+                                
+                    except Product.DoesNotExist:
+                        logger.error(f"Product with ID {item['product_id']} not found")
+                        continue
+                    
+                logger.info(f"Successfully created order {order.id} for user {user.id}")
+                
             except User.DoesNotExist:
-                logger.error(f"User with ID {user_id} does not exist.")
+                logger.error(f"User with ID {user_id} does not exist")
+                raise
+                
         else:
-            # Handle Guest Order
+            # Create order for guest user
             order = Order.objects.create(
                 invoice=order_id,
-                amount_paid=amount_total / 100,
-                payment_method='stripe'
+                full_name=shipping_fullname,
+                email=shipping_email,
+                shipping_address=shipping_address,
+                amount_paid=amount_total / 100,  # Convert cents to actual currency
+                payment_method='stripe',
+                payment_status='completed',
+                shipped=False
             )
-            logger.info(f"Order created for guest with amount {order.amount_paid}")
+            
+            # Create order items for guest
+            for item in cart_items:
+                try:
+                    product = Product.objects.get(id=item['product_id'])
+                    order_item = OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        quantity=item['quantity'],
+                        price=item['price']
+                    )
+                    
+                    # Update product inventory if needed
+                    if hasattr(product, 'quantity'):
+                        new_quantity = product.quantity - item['quantity']
+                        if new_quantity >= 0:
+                            product.quantity = new_quantity
+                            product.save()
+                        else:
+                            logger.warning(f"Insufficient inventory for product {product.id}")
+                            
+                except Product.DoesNotExist:
+                    logger.error(f"Product with ID {item['product_id']} not found")
+                    continue
+            
+            logger.info(f"Successfully created guest order {order.id}")
 
-    except AttributeError as ae:
-        logger.error(f"AttributeError: {str(ae)}")
+        # # Send order confirmation email
+        # try:
+        #     send_order_confirmation_email(order)
+        # except Exception as e:
+        #     logger.error(f"Failed to send order confirmation email: {e}")
+
+        return order
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in handle_completed_checkout_session: {e}")
+        raise
     except Exception as e:
-        logger.error(f"Error in handle_completed_checkout_session: {str(e)}")
+        logger.error(f"Error in handle_completed_checkout_session: {e}")
+        raise
 
 
 def billing_info(request):

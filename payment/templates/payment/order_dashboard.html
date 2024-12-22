@@ -1,51 +1,82 @@
 {% extends 'store/base.html' %}
 {% load static %}
 {% block content %}
-{% for order in orders %}
-<tr>
-    <td>{{ order.id }}</td>
-    <td>{{ order.user.username }}</td>
-    <td>{{ order.date_ordered }}</td>
-    <td>{{ order.amount_paid }}</td>
-    <td>
-        {% if order.shipped %}
-            Shipped
-        {% else %}
-            Processing
-        {% endif %}
-    </td>
-    <td>
-        {% if is_admin %}
-        <form method="post" action="{% url 'update_order_status' order.id %}">
-            {% csrf_token %}
-            <select name="status" onchange="this.form.submit()">
-                <option value="processing" {% if not order.shipped %}selected{% endif %}>Processing</option>
-                <option value="shipped" {% if order.shipped %}selected{% endif %}>Shipped</option>
-            </select>
-        </form>
-        {% endif %}
-    </td>
-</tr>
-{% endfor %}
+<div class="container mt-5">
+    <h2 class="mb-4">Order Dashboard</h2>
+    
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            Filters
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{% url 'order_dashboard' %}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="" {% if not request.GET.status %}selected{% endif %}>All</option>
+                            <option value="processing" {% if request.GET.status == 'processing' %}selected{% endif %}>Processing</option>
+                            <option value="shipped" {% if request.GET.status == 'shipped' %}selected{% endif %}>Shipped</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            </form>
+        </div>
+    </div>
 
-
-<script>
-  const handleStatusUpdate = async (orderId, newStatus) => {
-    try {
-        const response = await fetch(`/order/update_order_status/${orderId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify({ status: newStatus }),
-        });
-        if (response.ok) {
-            window.location.reload();
-        }
-    } catch (error) {
-        console.error('Error updating order status:', error);
-    }
-};
-</script>
+    <!-- Orders Table -->
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Username</th>
+                    <th scope="col">Date Ordered</th>
+                    <th scope="col">Amount Paid</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.user.username }}</td>
+                    <td>{{ order.date_ordered }}</td>
+                    <td>{{ order.amount_paid }}</td>
+                    <td>
+                        {% if order.shipped %}
+                        <span class="badge bg-success">Shipped</span>
+                        {% else %}
+                        <span class="badge bg-warning">Processing</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if is_admin %}
+                        <form method="post" action="{% url 'update_order_status' order.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <select name="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+                                <option value="processing" {% if not order.shipped %}selected{% endif %}>Processing</option>
+                                <option value="shipped" {% if order.shipped %}selected{% endif %}>Shipped</option>
+                            </select>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'order_details' order.id %}" class="btn btn-primary btn-sm">View Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

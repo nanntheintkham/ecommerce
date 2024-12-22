@@ -81,10 +81,24 @@ def processing_dash(request):
 
 @login_required
 def order_dashboard(request):
-    if request.user.is_superuser:
-        orders = Order.objects.all()
-    else:
-        orders = Order.objects.filter(user=request.user)
+    orders = Order.objects.all()
+
+    # Apply filters
+    status = request.GET.get('status')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if status:
+        if status == 'processing':
+            orders = orders.filter(shipped=False)
+        elif status == 'shipped':
+            orders = orders.filter(shipped=True)
+
+    if start_date:
+        orders = orders.filter(date_ordered__gte=start_date)
+
+    if end_date:
+        orders = orders.filter(date_ordered__lte=end_date)
     
     orders = orders.order_by('-date_ordered')
 
@@ -237,8 +251,6 @@ def stripe_webhook(request):
 
     return JsonResponse({'status': 'success'})
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def handle_completed_checkout_session(session):
@@ -559,54 +571,3 @@ def order_details(request, order_id):
         logger.error(f"Error fetching order details: {e}")
         messages.error(request, "An error occurred while fetching your order details.")
         return redirect('home')
-
-# @login_required
-# def order_dashboard(request):
-#     # Get filter parameters
-#     status = request.GET.get('status')
-#     date = request.GET.get('date')
-    
-#     # Base queryset
-#     if request.user.is_superuser:
-#         orders = Order.objects.all()
-#     else:
-#         orders = Order.objects.filter(user=request.user)
-    
-#     # Apply filters
-#     if status:
-#         orders = orders.filter(status=status)
-#     if date:
-#         orders = orders.filter(created_at__date=datetime.strptime(date, '%Y-%m-%d').date())
-        
-#     # Order by most recent first
-#     orders = orders.order_by('-created_at')
-    
-#     # Pagination
-#     paginator = Paginator(orders, 10)  # Show 10 orders per page
-#     page = request.GET.get('page')
-#     orders = paginator.get_page(page)
-    
-#     # Get counts for admin dashboard
-#     if request.user.is_superuser:
-#         pending_orders = Order.objects.filter(status='pending').count()
-#     else:
-#         pending_orders = orders.filter(status='pending').count()
-    
-#     context = {
-#         'orders': orders,
-#         'pending_orders': pending_orders,
-#         'status': status,
-#         'date': date,
-#     }
-    
-#     return render(request, 'payment/shipped_dash.html', context)
-
-# @staff_member_required
-# def update_order_status(request, order_id):
-#     if request.method == 'POST':
-#         order = get_object_or_404(Order, id=order_id)
-#         new_status = request.POST.get('status')
-#         if new_status in ['pending', 'processing', 'shipped', 'delivered']:
-#             order.status = new_status
-#             order.save()
-#     return redirect('shipped_dash')

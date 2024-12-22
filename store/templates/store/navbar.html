@@ -45,11 +45,8 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'update_user' %}">Profile</a></li>
                             <li><a class="dropdown-item" href="{% url 'update_info' %}">Settings</a></li>
-                            {% if user.is_superuser %}
                             <li><hr class="dropdown-divider" /></li>
-                            <li><a class="dropdown-item" href="{% url 'shipped_dash' %}">Shipped Orders</a></li>
-                            <li><a class="dropdown-item" href="{% url 'processing_dash' %}">Pending Orders</a></li>
-                            {% endif %}
+                            <li><a class="dropdown-item" href="{% url 'order_dashboard' %}">Orders</a></li>
                             <li><hr class="dropdown-divider" /></li>
                             <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                         </ul>

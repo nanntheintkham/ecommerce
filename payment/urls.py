@@ -9,9 +9,10 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('products/<int:pk>/purchase/', views.purchase_digital_product, name='purchase_digital_product'),
     path('billing_info/', views.billing_info, name='billing_info'),
-    path('shipped_dash/', views.shipped_dash, name='shipped_dash'),
+    path('order_dashboard/', views.order_dashboard, name='order_dashboard'),
     path('processing_dash/', views.processing_dash, name='processing_dash'),
     path('orders/<int:pk>', views.orders, name='orders'),
+    path('order/update_order_status/<int:order_id>/', views.update_order_status, name='update_order_status'),
     path('paypal/', include("paypal.standard.ipn.urls")),
     # Stripe endpoints
     path('create-checkout-session/', views.create_stripe_session, name='create_checkout_session'),

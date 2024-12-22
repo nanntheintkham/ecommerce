@@ -12,6 +12,8 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
+from django.contrib.admin.views.decorators import staff_member_required
 import uuid
 import datetime
 import stripe
@@ -77,26 +79,33 @@ def processing_dash(request):
         messages.error(request, 'Unauthorized access. Please login as a superuser.')
         return redirect('home')
 
-def shipped_dash(request):
-    if request.user.is_authenticated and request.user.is_superuser:
-        orders = Order.objects.filter(shipped=True)
-
-        if request.POST:
-            status = request.POST['shipping_status']
-            num = request.POST['num']
-			# Get the order
-            order = Order.objects.filter(id=num)
-			# update order
-            order.update(shipped=False)
-
-            messages.success(request, 'Order status updated successfully')
-            return redirect('shipped_dash')
-        return render(request, 'payment/shipped_dash.html', {"orders": orders})
+@login_required
+def order_dashboard(request):
+    if request.user.is_superuser:
+        orders = Order.objects.all()
     else:
-        messages.error(request, 'Unauthorized access. Please login as a superuser.')
-        return redirect('home')
+        orders = Order.objects.filter(user=request.user)
+    
+    orders = orders.order_by('-date_ordered')
 
-logger = logging.getLogger(__name__)
+    return render(request, 'payment/order_dashboard.html', {
+        'orders': orders,
+        'is_admin': request.user.is_superuser
+    })
+
+
+@staff_member_required
+def update_order_status(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        new_status = request.POST.get('status')
+        if new_status == 'shipped':
+            order.shipped = True
+        elif new_status == 'processing':
+            order.shipped = False
+        order.save()
+        messages.success(request, f'Order #{order.id} status updated to {new_status}.')
+    return redirect('order_dashboard')
 
 def create_stripe_session(request):
     logger.info("Stripe checkout session started")
@@ -540,7 +549,7 @@ def order_details(request, order_id):
             'order': order,
             'order_items': order_items,
         }
-        return render(request, 'payment/order_details.html', context)
+        return render(request, 'payment/orders.html', context)
 
     except Order.DoesNotExist:
         messages.error(request, "Order not found or you don't have permission to view this order.")
@@ -550,3 +559,54 @@ def order_details(request, order_id):
         logger.error(f"Error fetching order details: {e}")
         messages.error(request, "An error occurred while fetching your order details.")
         return redirect('home')
+
+# @login_required
+# def order_dashboard(request):
+#     # Get filter parameters
+#     status = request.GET.get('status')
+#     date = request.GET.get('date')
+    
+#     # Base queryset
+#     if request.user.is_superuser:
+#         orders = Order.objects.all()
+#     else:
+#         orders = Order.objects.filter(user=request.user)
+    
+#     # Apply filters
+#     if status:
+#         orders = orders.filter(status=status)
+#     if date:
+#         orders = orders.filter(created_at__date=datetime.strptime(date, '%Y-%m-%d').date())
+        
+#     # Order by most recent first
+#     orders = orders.order_by('-created_at')
+    
+#     # Pagination
+#     paginator = Paginator(orders, 10)  # Show 10 orders per page
+#     page = request.GET.get('page')
+#     orders = paginator.get_page(page)
+    
+#     # Get counts for admin dashboard
+#     if request.user.is_superuser:
+#         pending_orders = Order.objects.filter(status='pending').count()
+#     else:
+#         pending_orders = orders.filter(status='pending').count()
+    
+#     context = {
+#         'orders': orders,
+#         'pending_orders': pending_orders,
+#         'status': status,
+#         'date': date,
+#     }
+    
+#     return render(request, 'payment/shipped_dash.html', context)
+
+# @staff_member_required
+# def update_order_status(request, order_id):
+#     if request.method == 'POST':
+#         order = get_object_or_404(Order, id=order_id)
+#         new_status = request.POST.get('status')
+#         if new_status in ['pending', 'processing', 'shipped', 'delivered']:
+#             order.status = new_status
+#             order.save()
+#     return redirect('shipped_dash')

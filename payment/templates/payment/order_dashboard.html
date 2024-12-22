@@ -1,0 +1,51 @@
+{% extends 'store/base.html' %}
+{% load static %}
+{% block content %}
+{% for order in orders %}
+<tr>
+    <td>{{ order.id }}</td>
+    <td>{{ order.user.username }}</td>
+    <td>{{ order.date_ordered }}</td>
+    <td>{{ order.amount_paid }}</td>
+    <td>
+        {% if order.shipped %}
+            Shipped
+        {% else %}
+            Processing
+        {% endif %}
+    </td>
+    <td>
+        {% if is_admin %}
+        <form method="post" action="{% url 'update_order_status' order.id %}">
+            {% csrf_token %}
+            <select name="status" onchange="this.form.submit()">
+                <option value="processing" {% if not order.shipped %}selected{% endif %}>Processing</option>
+                <option value="shipped" {% if order.shipped %}selected{% endif %}>Shipped</option>
+            </select>
+        </form>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+
+
+<script>
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+        const response = await fetch(`/order/update_order_status/${orderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({ status: newStatus }),
+        });
+        if (response.ok) {
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error('Error updating order status:', error);
+    }
+};
+</script>
+{% endblock %}

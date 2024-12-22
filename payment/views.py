@@ -516,34 +516,38 @@ def purchase_digital_product(request, pk):
     return render(request, 'purchase_digital_product.html', {'product': product, 'form': form})
 
 def payment_success(request):
+    # Clear cart after successful payment
     clear_cart(request)
 
-    digital_products_with_urls = []
-
+    # Fetch the last authenticated user's order or handle guest logic
+    order = None
     if request.user.is_authenticated:
         order = Order.objects.filter(user=request.user).last()
-        try:
-            send_order_confirmation_email(order)
-        except Exception as e:
-            logger.error(f"Failed to send order confirmation email: {e}")
-        
-        if order and hasattr(order, 'orderitem_set'):
-            for item in order.orderitem_set.all():
-                if item.product.product_type == 'digital':
-                    UserDigitalPurchase.objects.get_or_create(user=request.user, digital_product=item.product)
-                    
-                    stream_url = item.product.get_presigned_url() if hasattr(item.product, 'get_presigned_url') else None
-                    digital_products_with_urls.append({
-                        'product': item.product,
-                        'stream_url': stream_url
-                    })
+    else:
+        invoice_id = request.GET.get('invoice')
+        if invoice_id:
+            order = Order.objects.filter(invoice=invoice_id).first()
 
+    # Handle digital products
+    digital_products_with_urls = []
+    if order and order.orderitem_set.exists():
+        for item in order.orderitem_set.all():
+            if item.product.product_type == 'digital':
+                UserDigitalPurchase.objects.get_or_create(user=request.user, digital_product=item.product)
+                stream_url = item.product.get_presigned_url() if hasattr(item.product, 'get_presigned_url') else None
+                digital_products_with_urls.append({
+                    'product': item.product,
+                    'stream_url': stream_url
+                })
+
+    # Pass order details to the template
     context = {
-        'order': order if request.user.is_authenticated else None,
+        'order': order,
         'digital_products_with_urls': digital_products_with_urls,
     }
 
     return render(request, 'payment/payment_success.html', context)
+
 
 
 def payment_failed(request):

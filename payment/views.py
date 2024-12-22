@@ -58,31 +58,15 @@ def orders(request, pk):
         messages.error(request, 'Unauthorized access. Please login as a superuser.')
         return redirect('home')
 
-def processing_dash(request):
-    if request.user.is_authenticated and request.user.is_superuser:
-        orders = Order.objects.filter(shipped=False)
-
-        if request.POST:
-            status = request.POST['shipping_status']
-            num = request.POST['num']
-			# Get the order
-            order = Order.objects.filter(id=num)
-			# grab Date and time
-            now = datetime.datetime.now()
-			# update order
-            order.update(shipped=True, date_shipped=now)
-
-            messages.success(request, 'Order status updated successfully')
-            return redirect('processing_dash')
-
-        return render(request, 'payment/processing_dash.html', {"orders": orders})
-    else:
-        messages.error(request, 'Unauthorized access. Please login as a superuser.')
-        return redirect('home')
-
 @login_required
 def order_dashboard(request):
-    orders = Order.objects.all()
+    if request.user.is_authenticated and request.user.is_superuser:
+        orders = Order.objects.all()
+    elif request.user.is_authenticated:
+        orders = Order.objects.filter(user=request.user)
+    else:
+        messages.error(request, 'Unauthorized access. Please login to view the order history and details.')
+        return redirect('home')
 
     # Apply filters
     status = request.GET.get('status')
@@ -289,99 +273,96 @@ def handle_completed_checkout_session(session):
             logger.error(f"Error decoding cart items: {e}")
             cart_items = []
 
-        # Create order based on user type (authenticated or guest)
-        if user_id and user_id != 'guest':
-            try:
-                user = User.objects.get(id=int(user_id))
-                # Create order for authenticated user
-                order = Order.objects.create(
-                    user=user,
-                    invoice=order_id,
-                    full_name=shipping_fullname,
-                    email=shipping_email,
-                    shipping_address=shipping_address,
-                    amount_paid=amount_total / 100,  # Convert cents to actual currency
-                    paid=True,
-                    shipped=False
-                )
+        # # Create order based on user type (authenticated or guest)
+        # if user_id and user_id != 'guest':
+        #     try:
                 
-                # Create order items
-                for item in cart_items:
-                    try:
-                        product = Product.objects.get(id=item['product_id'])
-                        order_item = OrderItem.objects.create(
-                            order=order,
-                            product=product,
-                            user=user,
-                            quantity=item['quantity'],
-                            price=item['price']
-                        )
+                
+        #         # Create order items
+        #         for item in cart_items:
+        #             try:
+        #                 product = Product.objects.get(id=item['product_id'])
+        #                 order_item = OrderItem.objects.create(
+        #                     order=order,
+        #                     product=product,
+        #                     user=user,
+        #                     quantity=item['quantity'],
+        #                     price=item['price']
+        #                 )
                         
-                        # Handle digital products
-                        if item.get('product_type') == 'digital' or getattr(product, 'product_type', '') == 'digital':
-                            UserDigitalPurchase.objects.get_or_create(
-                                user=user,
-                                digital_product=product
-                            )
+        #                 # Handle digital products
+        #                 if item.get('product_type') == 'digital' or getattr(product, 'product_type', '') == 'digital':
+        #                     UserDigitalPurchase.objects.get_or_create(
+        #                         user=user,
+        #                         digital_product=product
+        #                     )
                             
-                        # Update product inventory if needed
-                        if hasattr(product, 'quantity'):
-                            new_quantity = product.quantity - item['quantity']
-                            if new_quantity >= 0:
-                                product.quantity = new_quantity
-                                product.save()
-                            else:
-                                logger.warning(f"Insufficient inventory for product {product.id}")
+        #                 # Update product inventory if needed
+        #                 if hasattr(product, 'quantity'):
+        #                     new_quantity = product.quantity - item['quantity']
+        #                     if new_quantity >= 0:
+        #                         product.quantity = new_quantity
+        #                         product.save()
+        #                     else:
+        #                         logger.warning(f"Insufficient inventory for product {product.id}")
                                 
-                    except Product.DoesNotExist:
-                        logger.error(f"Product with ID {item['product_id']} not found")
-                        continue
+        #             except Product.DoesNotExist:
+        #                 logger.error(f"Product with ID {item['product_id']} not found")
+        #                 continue
                     
-                logger.info(f"Successfully created order {order.id} for user {user.id}")
+        #         logger.info(f"Successfully created order {order.id} for user {user.id}")
                 
-            except User.DoesNotExist:
-                logger.error(f"User with ID {user_id} does not exist")
-                raise
+        #     except User.DoesNotExist:
+        #         logger.error(f"User with ID {user_id} does not exist")
+        #         raise
                 
-        else:
-            # Create order for guest user
-            order = Order.objects.create(
-                invoice=order_id,
-                full_name=shipping_fullname,
-                email=shipping_email,
-                shipping_address=shipping_address,
-                amount_paid=amount_total / 100,  # Convert cents to actual currency
-                payment_method='stripe',
-                payment_status='completed',
-                shipped=False
-            )
+        # else:
+        #     # Create order for guest user
+        #     order = Order.objects.create(
+        #         invoice=order_id,
+        #         full_name=shipping_fullname,
+        #         email=shipping_email,
+        #         shipping_address=shipping_address,
+        #         amount_paid=amount_total / 100,  # Convert cents to actual currency
+        #         payment_method='stripe',
+        #         payment_status='completed',
+        #         shipped=False
+        #     )
             
-            # Create order items for guest
-            for item in cart_items:
-                try:
-                    product = Product.objects.get(id=item['product_id'])
-                    order_item = OrderItem.objects.create(
-                        order=order,
-                        product=product,
-                        quantity=item['quantity'],
-                        price=item['price']
-                    )
+        #     # Create order items for guest
+        #     for item in cart_items:
+        #         try:
+        #             product = Product.objects.get(id=item['product_id'])
+        #             order_item = OrderItem.objects.create(
+        #                 order=order,
+        #                 product=product,
+        #                 quantity=item['quantity'],
+        #                 price=item['price']
+        #             )
                     
-                    # Update product inventory if needed
-                    if hasattr(product, 'quantity'):
-                        new_quantity = product.quantity - item['quantity']
-                        if new_quantity >= 0:
-                            product.quantity = new_quantity
-                            product.save()
-                        else:
-                            logger.warning(f"Insufficient inventory for product {product.id}")
+        #             # Update product inventory if needed
+        #             if hasattr(product, 'quantity'):
+        #                 new_quantity = product.quantity - item['quantity']
+        #                 if new_quantity >= 0:
+        #                     product.quantity = new_quantity
+        #                     product.save()
+        #                 else:
+        #                     logger.warning(f"Insufficient inventory for product {product.id}")
                             
-                except Product.DoesNotExist:
-                    logger.error(f"Product with ID {item['product_id']} not found")
-                    continue
+        #         except Product.DoesNotExist:
+        #             logger.error(f"Product with ID {item['product_id']} not found")
+        #             continue
             
-            logger.info(f"Successfully created guest order {order.id}")
-
+        #     logger.info(f"Successfully created guest order {order.id}")
+        # Retrieve the order using the invoice (order_id)
+        order = Order.objects.filter(invoice=order_id).first()
+        if order:
+            order.paid = True
+            order.amount_paid = session.amount_total / 100  # Convert from cents
+            order.save()
+            logger.info(f"Order {order_id} marked as paid.")
+        else:
+            logger.error(f"Order {order_id} not found.")
 
         return order
 
@@ -442,6 +423,27 @@ def billing_info(request):
         host = request.get_host()
         my_invoice = str(uuid.uuid4())
 
+        # Create the order
+        order = Order.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            invoice=my_invoice,
+            full_name=shipping_data.get('shipping_fullname'),
+            email=shipping_data.get('shipping_email'),
+            shipping_address=f"{shipping_data.get('shipping_address1')}, {shipping_data.get('shipping_city')}",
+            amount_paid=totals,
+            paid=False,  # Mark as unpaid initially
+        )
+
+        # Create order items
+        for product in cart.get_prods():
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                user=request.user if request.user.is_authenticated else None,
+                quantity=cart.get_quants().get(str(product.id), 0),
+                price=product.sale_price if product.is_sale else product.price,
+            )
+
         # PayPal configuration
         paypal_dict = {
             'business': settings.PAYPAL_RECEIVER_EMAIL,
@@ -461,6 +463,7 @@ def billing_info(request):
             'publishable_key': settings.STRIPE_PUBLIC_KEY,
             'total_amount': int(totals * 100),  # Convert to cents
             'currency': 'huf',
+            'invoice': my_invoice,
         }
 
         context = {
@@ -477,6 +480,23 @@ def billing_info(request):
     else:
         messages.error(request, "Access denied!")
         return redirect('home')
+
+@csrf_exempt
+def paypal_ipn(request):
+    from paypal.standard.ipn.models import PayPalIPN
+
+    ipn = PayPalIPN(request.POST)
+
+    if ipn.verify():
+        invoice_id = ipn.invoice
+        order = Order.objects.filter(invoice=invoice_id).first()
+        if order:
+            order.paid = True
+            order.save()
+            logger.info(f"Order {invoice_id} marked as paid.")
+        else:
+            logger.error(f"No order found for invoice: {invoice_id}")
+    return JsonResponse({'status': 'OK'})
 
 def checkout(request):
     cart = Cart(request)

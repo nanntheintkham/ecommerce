@@ -167,7 +167,10 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
-                }
+                },
+                body: JSON.stringify({
+                    'invoice': '{{ stripe_data.invoice }}'
+                })
             });
 
             const data = await response.json();

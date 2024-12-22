@@ -34,6 +34,7 @@ def orders(request, pk):
         order = Order.objects.get(id=pk)
         # Get the order items
         items = OrderItem.objects.filter(order=pk)
+        print(items)
 
         if request.POST:
             status = request.POST['shipping_status']
@@ -547,27 +548,3 @@ def payment_success(request):
 
 def payment_failed(request):
     return render(request, 'payment/payment_failed.html', {})
-
-@login_required
-def order_details(request, order_id):
-    """
-    View order details for authenticated non-admin users.
-    """
-    try:
-        order = get_object_or_404(Order, id=order_id, user=request.user)
-        order_items = OrderItem.objects.filter(order=order)
-
-        context = {
-            'order': order,
-            'order_items': order_items,
-        }
-        return render(request, 'payment/orders.html', context)
-
-    except Order.DoesNotExist:
-        messages.error(request, "Order not found or you don't have permission to view this order.")
-        return redirect('home')
-
-    except Exception as e:
-        logger.error(f"Error fetching order details: {e}")
-        messages.error(request, "An error occurred while fetching your order details.")
-        return redirect('home')

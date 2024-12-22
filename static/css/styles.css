@@ -4613,6 +4613,10 @@ textarea.form-control-lg {
   display: none;
 }
 
+.badge.bg-success {
+    background-color: #198754 !important; /* Force Bootstrap green */
+}
+
 .btn .badge {
   position: relative;
   top: -1px;

@@ -450,7 +450,7 @@ def billing_info(request):
             'invoice': my_invoice,
             'currency_code': 'HUF',
             'notify_url': f'https://{host}{reverse("paypal-ipn")}',
-            'return_url': f'https://{host}{reverse("payment_success")}',
+            'return_url': f'https://{host}{reverse("payment_success")}?inovoice={my_invoice}',
             'cancel_return': f'https://{host}{reverse("payment_failed")}',
         }
 

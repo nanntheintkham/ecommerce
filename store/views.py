@@ -152,7 +152,6 @@ def view_digital_product(request, pk):
     
     # Generate pre-signed URL
     stream_url = digital_product.get_presigned_url()
-    print(stream_url)
     # Update last viewed timestamp
     purchase.last_viewed = timezone.now()
     purchase.save()

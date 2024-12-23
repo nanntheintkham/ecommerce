@@ -139,6 +139,11 @@ $(document).ready(function() {
                        .prop('disabled', false);
                 }, 2000);
             },
+            success:function(json) {
+                document.getElementById('cart_quantity').textContent = json.qty
+                location.reload();
+            },
+            
             error: function(xhr, errmsg, err) {
                 btn.html('<i class="bi bi-exclamation-triangle me-2"></i>Error')
                    .removeClass('btn-primary')

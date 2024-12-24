@@ -1,64 +1,379 @@
 {% extends 'store/base.html' %}
 {% load static %}
-{% block content %}
-<div class="video-container">
-    <video
-        id="streamPlayer"
-        class="video-js vjs-default-skin vjs-big-play-centered"
-        controls
-        preload="auto"
-        poster="{{ product.image.url }}"
-        oncontextmenu="return false";>
-        <source src="{{ stream_url }}" type="video/mp4">
-    </video>
-</div>
-{% endblock %}
 
-{% block extra_css %}
+{% block content %}
+<div class="digital-product-container">
+    <div class="container py-4">
+        <!-- Product Header -->
+        <div class="product-header mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'category' product.category.slug %}">{{ product.category.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="product-title">{{ product.name }}</h1>
+            {% if product.description %}
+            <p class="product-description">{{ product.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content-wrapper">
+            <!-- Video Player Container -->
+            <div class="video-player-wrapper">
+                <div class="video-container">
+                    <video
+                        id="streamPlayer"
+                        class="video-js vjs-default-skin vjs-big-play-centered"
+                        controls
+                        preload="auto"
+                        poster="{{ product.image.url }}"
+                        oncontextmenu="return false;">
+                        <source src="{{ stream_url }}" type="video/mp4">
+                        <p class="vjs-no-js">
+                            To view this video please enable JavaScript, and consider upgrading to a
+                            web browser that supports HTML5 video
+                        </p>
+                    </video>
+                </div>
+
+                <!-- Video Controls Panel -->
+                <div class="video-controls-panel">
+                    <div class="controls-grid">
+                        <!-- Playback Controls -->
+                        <div class="control-group">
+                            <div class="control-item">
+                                <label class="control-label">
+                                    <i class="bi bi-speedometer2"></i>
+                                    Speed
+                                </label>
+                                <select class="control-select" id="playbackSpeed">
+                                    <option value="0.5">0.5x</option>
+                                    <option value="1.0" selected>1.0x</option>
+                                    <option value="1.5">1.5x</option>
+                                    <option value="2.0">2.0x</option>
+                                </select>
+                            </div>
+                            <div class="control-item">
+                                <label class="control-label">
+                                    <i class="bi bi-badge-hd"></i>
+                                    Quality
+                                </label>
+                                <select class="control-select" id="videoQuality">
+                                    <option value="auto" selected>Auto</option>
+                                    <option value="1080p">1080p</option>
+                                    <option value="720p">720p</option>
+                                    <option value="480p">480p</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Keyboard Shortcuts -->
+                        <div class="shortcuts-group">
+                            <h3 class="shortcuts-title">
+                                <i class="bi bi-keyboard"></i>
+                                Keyboard Shortcuts
+                            </h3>
+                            <div class="shortcuts-grid">
+                                <div class="shortcut-item">
+                                    <kbd>Space</kbd>
+                                    <span>Play/Pause</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>←</kbd>
+                                    <span>-10s</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>→</kbd>
+                                    <span>+10s</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>F</kbd>
+                                    <span>Fullscreen</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
-    .video-container {
+    .digital-product-container {
+        background-color: #f8f9fa;
+        min-height: calc(100vh - 60px);
+        padding: 2rem 0;
+    }
+
+    .product-header {
+        max-width: 1200px;
+        margin: 0 auto 2rem;
+    }
+
+    .product-title {
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+
+    .product-description {
+        color: #4a4a4a;
+        font-size: 1.1rem;
+        line-height: 1.6;
         max-width: 800px;
+    }
+
+    .content-wrapper {
+        max-width: 1200px;
         margin: 0 auto;
+    }
+
+    .video-player-wrapper {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+
+    .video-container {
+        position: relative;
+        width: 100%;
+        background: #000;
     }
 
     .video-js {
         width: 100%;
-        border-radius: 5px;
-        background-color: #000;
+        aspect-ratio: 16/9;
     }
 
-    .vjs-big-play-centered .vjs-big-play-button {
-        font-size: 2.5em;
-        background-color: rgba(0, 0, 0, 0.6);
+    .video-controls-panel {
+        padding: 2rem;
+    }
+
+    .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .control-group {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .control-item {
+        flex: 1;
+    }
+
+    .control-label {
+        display: block;
+        color: #1a1a1a;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .control-label i {
+        margin-right: 0.5rem;
+        color: #0066cc;
+    }
+
+    .control-select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 2px solid #e1e1e1;
+        border-radius: 8px;
+        background: #f8f9fa;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+
+    .control-select:hover {
+        border-color: #0066cc;
+    }
+
+    .shortcuts-group {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    .shortcuts-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 1rem;
+    }
+
+    .shortcuts-title i {
+        color: #0066cc;
+        margin-right: 0.5rem;
+    }
+
+    .shortcuts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+
+    .shortcut-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    kbd {
+        background: #fff;
+        border: 1px solid #e1e1e1;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .shortcut-item span {
+        color: #4a4a4a;
+        font-size: 0.9rem;
+    }
+
+    /* Video.js Custom Theme */
+    .video-js .vjs-big-play-button {
+        background-color: rgba(0, 102, 204, 0.9);
+        border: none;
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        line-height: 80px;
+        font-size: 3.5em;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.3s ease;
+    }
+
+    .video-js:hover .vjs-big-play-button {
+        background-color: #0066cc;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    .video-js .vjs-control-bar {
+        background-color: rgba(0, 0, 0, 0.8);
+        height: 4em;
+    }
+
+    .video-js .vjs-progress-control:hover .vjs-progress-holder {
+        height: 8px;
+    }
+
+    @media (max-width: 768px) {
+        .controls-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .control-group {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .product-title {
+            font-size: 2rem;
+        }
+
+        .video-controls-panel {
+            padding: 1.5rem;
+        }
+
+        .shortcuts-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 </style>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const player = videojs('streamPlayer', {
-            controls: true,
-            autoplay: false,
-            preload: 'auto',
-            responsive: true,
-            fluid: true,
-            controlBar: {
-                children: [
-                    'playToggle',
-                    'volumePanel',
-                    'currentTimeDisplay',
-                    'timeDivider',
-                    'durationDisplay',
-                    'progressControl',
-                    'fullscreenToggle',
-                ],
-            },
-        });
-
-        console.log('Simplified Video.js player initialized:', player);
+document.addEventListener('DOMContentLoaded', function() {
+    const player = videojs('streamPlayer', {
+        controls: true,
+        autoplay: false,
+        preload: 'auto',
+        responsive: true,
+        fluid: true,
+        playbackRates: [0.5, 1, 1.5, 2],
+        controlBar: {
+            children: [
+                'playToggle',
+                'volumePanel',
+                'currentTimeDisplay',
+                'timeDivider',
+                'durationDisplay',
+                'progressControl',
+                'playbackRateMenuButton',
+                'fullscreenToggle',
+            ],
+        },
     });
-</script>
 
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Only handle shortcuts if the focus is not in an input field
+        if (e.target.tagName.toLowerCase() !== 'input' && e.target.tagName.toLowerCase() !== 'select') {
+            if (e.code === 'Space') {
+                if (player.paused()) {
+                    player.play();
+                } else {
+                    player.pause();
+                }
+                e.preventDefault();
+            } else if (e.code === 'ArrowRight') {
+                player.currentTime(player.currentTime() + 10);
+                e.preventDefault();
+            } else if (e.code === 'ArrowLeft') {
+                player.currentTime(player.currentTime() - 10);
+                e.preventDefault();
+            } else if (e.code === 'KeyF') {
+                if (player.isFullscreen()) {
+                    player.exitFullscreen();
+                } else {
+                    player.requestFullscreen();
+                }
+                e.preventDefault();
+            }
+        }
+    });
+
+    // Handle playback speed changes
+    const speedSelect = document.getElementById('playbackSpeed');
+    speedSelect.addEventListener('change', function() {
+        player.playbackRate(parseFloat(this.value));
+    });
+
+    // Handle quality selection
+    const qualitySelect = document.getElementById('videoQuality');
+    qualitySelect.addEventListener('change', function() {
+        // Implement quality change logic here
+        console.log('Quality changed to:', this.value);
+    });
+
+    // Add loading indicator
+    player.on('waiting', function() {
+        this.addClass('vjs-loading');
+    });
+
+    player.on('canplay', function() {
+        this.removeClass('vjs-loading');
+    });
+});
+</script>
 {% endblock %}

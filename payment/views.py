@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db import transaction
 import uuid
 import datetime
 import stripe
@@ -106,12 +107,36 @@ def update_order_status(request, order_id):
         messages.success(request, f'Order #{order.id} status updated to {new_status}.')
     return redirect('order_dashboard')
 
+def validate_stock(cart):
+    """
+    Validates if all items in cart have sufficient stock.
+    Returns (bool, list of tuples with insufficient stock items)
+    """
+    insufficient_stock = []
+    has_sufficient_stock = True
+    
+    for product in cart.get_prods():
+        quantity = cart.get_quants().get(str(product.id), 0)
+        if product.stock < quantity:
+            insufficient_stock.append((product.name, product.stock))
+            has_sufficient_stock = False
+            
+    return has_sufficient_stock, insufficient_stock
+
 def create_stripe_session(request):
     logger.info("Stripe checkout session started")
     if request.method == 'POST':
         try:
             # Initialize cart
             cart = Cart(request)
+            # Validate stock before proceeding
+            has_stock, insufficient_items = validate_stock(cart)
+            if not has_stock:
+                return JsonResponse({
+                    'error': 'Some items are out of stock',
+                    'insufficient_items': insufficient_items
+                }, status=400)
+            
             cart_products = cart.get_prods
             totals = cart.cart_total()
             
@@ -157,11 +182,7 @@ def create_stripe_session(request):
                 'user_id': str(request.user.id) if request.user.is_authenticated else 'guest',
                 'shipping_fullname': shipping_data.get('shipping_fullname', ''),
                 'shipping_email': shipping_data.get('shipping_email', ''),
-                'shipping_address1': shipping_data.get('shipping_address1', ''),
-                'shipping_address2': shipping_data.get('shipping_address2', ''),
-                'shipping_city': shipping_data.get('shipping_city', ''),
-                'shipping_state': shipping_data.get('shipping_state', ''),
-                'shipping_zipcode': shipping_data.get('shipping_zipcode', ''),
+                
                 'cart_items': json.dumps(cart_items_data),
                 'total_amount': str(totals)
             }
@@ -175,9 +196,6 @@ def create_stripe_session(request):
                 cancel_url=request.build_absolute_uri(reverse('payment_failed')),
                 metadata=metadata,
                 customer_email=shipping_data.get('shipping_email'),  # Pre-fill customer email if available
-                shipping_address_collection={
-                    'allowed_countries': ['HU'],  # Adjust countries as needed
-                },
                 payment_intent_data={
                     'metadata': metadata,  # Include metadata in payment intent for webhook processing
                 },
@@ -246,125 +264,46 @@ def handle_completed_checkout_session(session):
     logger.info("Starting to handle completed checkout session")
     
     try:
-        # Get metadata from the session
-        metadata = session.metadata
-        if not metadata:
-            raise ValueError("No metadata found in session")
+        with transaction.atomic():
+            # Get metadata from the session
+            metadata = session.metadata
+            if not metadata:
+                raise ValueError("No metadata found in session")
 
-        order_id = metadata.get('order_id')
-        user_id = metadata.get('user_id')
-        amount_total = session.amount_total  # Amount in cents
-        
-        # Get shipping details from metadata
-        shipping_fullname = metadata.get('shipping_fullname')
-        shipping_email = metadata.get('shipping_email')
-        shipping_address = (
-            f"{metadata.get('shipping_address1', '')}\n"
-            f"{metadata.get('shipping_address2', '')}\n"
-            f"{metadata.get('shipping_city', '')}\n"
-            f"{metadata.get('shipping_state', '')}\n"
-            f"{metadata.get('shipping_zipcode', '')}"
-        ).strip()
+            order_id = metadata.get('order_id')
+            user_id = metadata.get('user_id')
+            amount_total = session.amount_total  # Amount in cents
 
-        # Parse cart items from metadata
-        try:
-            cart_items = json.loads(metadata.get('cart_items', '[]'))
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding cart items: {e}")
-            cart_items = []
+            # Parse cart items from metadata
+            try:
+                cart_items = json.loads(metadata.get('cart_items', '[]'))
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding cart items: {e}")
+                cart_items = []
 
-        # # Create order based on user type (authenticated or guest)
-        # if user_id and user_id != 'guest':
-        #     try:
-                
-                
-        #         # Create order items
-        #         for item in cart_items:
-        #             try:
-        #                 product = Product.objects.get(id=item['product_id'])
-        #                 order_item = OrderItem.objects.create(
-        #                     order=order,
-        #                     product=product,
-        #                     user=user,
-        #                     quantity=item['quantity'],
-        #                     price=item['price']
-        #                 )
-                        
-        #                 # Handle digital products
-        #                 if item.get('product_type') == 'digital' or getattr(product, 'product_type', '') == 'digital':
-        #                     UserDigitalPurchase.objects.get_or_create(
-        #                         user=user,
-        #                         digital_product=product
-        #                     )
-                            
-        #                 # Update product inventory if needed
-        #                 if hasattr(product, 'quantity'):
-        #                     new_quantity = product.quantity - item['quantity']
-        #                     if new_quantity >= 0:
-        #                         product.quantity = new_quantity
-        #                         product.save()
-        #                     else:
-        #                         logger.warning(f"Insufficient inventory for product {product.id}")
-                                
-        #             except Product.DoesNotExist:
-        #                 logger.error(f"Product with ID {item['product_id']} not found")
-        #                 continue
-                    
-        #         logger.info(f"Successfully created order {order.id} for user {user.id}")
-                
-        #     except User.DoesNotExist:
-        #         logger.error(f"User with ID {user_id} does not exist")
-        #         raise
-                
-        # else:
-        #     # Create order for guest user
-        #     order = Order.objects.create(
-        #         invoice=order_id,
-        #         full_name=shipping_fullname,
-        #         email=shipping_email,
-        #         shipping_address=shipping_address,
-        #         amount_paid=amount_total / 100,  # Convert cents to actual currency
-        #         payment_method='stripe',
-        #         payment_status='completed',
-        #         shipped=False
-        #     )
-            
-        #     # Create order items for guest
-        #     for item in cart_items:
-        #         try:
-        #             product = Product.objects.get(id=item['product_id'])
-        #             order_item = OrderItem.objects.create(
-        #                 order=order,
-        #                 product=product,
-        #                 quantity=item['quantity'],
-        #                 price=item['price']
-        #             )
-                    
-        #             # Update product inventory if needed
-        #             if hasattr(product, 'quantity'):
-        #                 new_quantity = product.quantity - item['quantity']
-        #                 if new_quantity >= 0:
-        #                     product.quantity = new_quantity
-        #                     product.save()
-        #                 else:
-        #                     logger.warning(f"Insufficient inventory for product {product.id}")
-                            
-        #         except Product.DoesNotExist:
-        #             logger.error(f"Product with ID {item['product_id']} not found")
-        #             continue
-            
-        #     logger.info(f"Successfully created guest order {order.id}")
-        # Retrieve the order using the invoice (order_id)
-        order = Order.objects.filter(invoice=order_id).first()
-        if order:
-            order.paid = True
-            order.amount_paid = session.amount_total / 100  # Convert from cents
-            order.save()
-            logger.info(f"Order {order_id} marked as paid.")
-        else:
-            logger.error(f"Order {order_id} not found.")
+            order = Order.objects.filter(invoice=order_id).first()
+            if order:
+                order.paid = True
+                order.amount_paid = session.amount_total / 100  # Convert from cents
+                order.save()
+                logger.info(f"Order {order_id} marked as paid.")
 
-        return order
+                # Update stock for each product
+                for item in cart_items:
+                    product_id = item.get('product_id')
+                    quantity = item.get('quantity')
+
+                    # Fetch product and update stock
+                    product = Product.objects.get(id=product_id)
+                    logger.info(f"Product {product.name} (ID: {product.id}) stock before update: {product.stock}")
+                    if product.product_type == 'physical':
+                        product.stock -= quantity
+                        product.save()
+                        logger.info(f"Updated stock for product {product.name} (ID: {product_id}). New stock: {product.stock}")
+            else:
+                logger.error(f"Order {order_id} not found.")
+
+            return order
 
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error in handle_completed_checkout_session: {e}")
@@ -494,6 +433,16 @@ def paypal_ipn(request):
             order.paid = True
             order.save()
             logger.info(f"Order {invoice_id} marked as paid.")
+
+            # Update stock for order items
+            for item in order.orderitem_set.all():
+                product = item.product
+                if product.product_type == 'physical' and product.stock >= item.quantity:
+                    product.stock -= item.quantity
+                    product.save()
+                    logger.info(f"Updated stock for product {product.name} (ID: {product.id}). New stock: {product.stock}")
+                else:
+                    logger.error(f"Insufficient stock for product {product.name} (ID: {product.id}).")
         else:
             logger.error(f"No order found for invoice: {invoice_id}")
     return JsonResponse({'status': 'OK'})
@@ -559,6 +508,12 @@ def payment_success(request):
                     'product': item.product,
                     'stream_url': stream_url
                 })
+            else:
+                product = Product.objects.get(id=item.product.id)
+                logger.info(f"Updating stock for product: {product.name} (Current Stock: {product.stock})")
+                product.stock -= item.quantity
+                product.save()
+                logger.info(f"New stock for product: {product.name} is {product.stock}")
 
     # Pass order details to the template
     context = {

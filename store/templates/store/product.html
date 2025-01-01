@@ -27,61 +27,93 @@
                 </strike>
                 &nbsp;
                 {{ product.sale_price }} HUF
-
-
-
         {% else %}
             {{ product.price }} HUF
-            
         {% endif %}
             <br/><br/>
-        <div class="row justify-content-center">
-            <div class="col-md-2">Quantity:</div>
-                <div class="col-md-2">
-                <select class="form-select form-select-sm" id="qty-cart">
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
-                </div>
-            </div>
-            <br/><br/>
+        {% if product.product_type == 'physical' and product.stock == 0 %}
+          <div class="d-flex justify-content-center small text-danger mb-2">
+            <div class="bi-star-fill"></div>
+            &nbsp;&nbsp;Out of stock&nbsp;&nbsp;
+            <div class="bi-star-fill"></div>
+          </div>
+        {% else %}
+          <div class="quantity-selector">
+            <button type="button" class="btn btn-outline-secondary" id="decrement-btn" onclick="updateQuantity(-1)">-</button>
+            <input
+              type="number"
+              id="quantity-input"
+              name="quantity"
+              value="1"
+              min="1"
+              max="{{ product.stock }}"
+              readonly
+              class="form-control text-center d-inline-block"
+              style="width: 80px;">
+            <button type="button" class="btn btn-outline-secondary" id="increment-btn" onclick="updateQuantity(1)">+</button>
+          </div>
+        {% endif %}
+          <br /><br />
+            
+            <button type="button" value="{{ product.id }}" class="btn btn-secondary" id="add-cart">Add To Cart</button>
+        
+        
         <a href="{% url 'home'%}" class="btn btn-secondary">Home</a>
-        <button type="button" value="{{ product.id }}" class="btn btn-secondary" id="add-cart">Add To Cart</button>
-          
+         
         </center>
       </div>
     </div>
   </div>
 </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-  $(document).on('click', '#add-cart', function(e){
+  $(document).on('click', '#add-cart', function(e) {
     e.preventDefault();
+
+    const productId = $('#add-cart').val();
+    const quantity = $('#quantity-input').val();
+
     $.ajax({
-      type: 'POST',
-      url: '{% url 'cart_add' %}',
-      data: {
-        product_id: $('#add-cart').val(),
-        csrfmiddlewaretoken: '{{ csrf_token }}',
-        product_qty: $('#qty-cart option:selected').text(),
-        action: 'post'
+        type: 'POST',
+        url: '{% url "cart_add" %}',
+        data: {
+            product_id: productId,
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            product_qty: quantity,
+            action: 'post',
         },
 
-        success: function(json){
-          document.getElementById('cart_quantity').textContent = json.qty
-          location.reload();
-          
+        success: function(json) {
+            // Update cart quantity visually
+            document.getElementById('cart_quantity').textContent = json.qty;
+
+            // Optionally reload only the cart UI
+            location.reload();
         },
 
-        error: function(xhr, errmsg, err){
-          console.log(xhr.status + ": " + xhr.responseText);
-        }
+        error: function(xhr, errmsg, err) {
+            console.log(xhr.status + ": " + xhr.responseText);
+            alert('Failed to add item to cart.');
+        },
     });
-  })
-        
+});
+
+function updateQuantity(change) {
+    const input = document.getElementById('quantity-input');
+    const maxQuantity = parseInt(input.max, 10);
+    const minQuantity = parseInt(input.min, 10);
+    let currentValue = parseInt(input.value, 10);
+
+    currentValue += change;
+
+    // Ensure quantity stays within min and max range
+    if (currentValue >= minQuantity && currentValue <= maxQuantity) {
+        input.value = currentValue;
+    }
+}
+      
 </script>
-{% endblock content %}
+{% endblock %}

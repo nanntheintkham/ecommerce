@@ -59,7 +59,6 @@ def update_info(request):
 		messages.success(request, "You Must Be Logged In To Access That Page!!")
 		return redirect('home')
 
-
 def update_password(request):
     if request.user.is_authenticated:
         current_user = request.user
@@ -129,8 +128,9 @@ def product(request, pk):
             'product': product,
             'purchased': purchased
         })
+    stock_range = range(1, product.stock + 1) if product.stock > 0 else []
         
-    return render(request,'store/product.html', {'product': product})    
+    return render(request,'store/product.html', {'product': product, 'stock_range': stock_range})    
     
 
 @login_required

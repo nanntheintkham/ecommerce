@@ -52,61 +52,7 @@ class Category(models.Model):
     class Meta:
         verbose_name_plural = 'Categories'
 
-#All of the products
-# class Product(models.Model):
-#     name = models.CharField(max_length=100)
-#     price = models.DecimalField(default=0, max_digits=10, decimal_places=2)
-#     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-#     description = models.TextField()
-#     image = models.ImageField(upload_to='upload/products', null=True, blank=True)
-#     #Sale stuff
-#     is_sale = models.BooleanField(default=False)
-#     sale_price = models.DecimalField(default=0, max_digits=10, decimal_places=2)
 
-#     def __str__(self):
-#         return self.name
-    
-# class DigitalProduct(models.Model):
-#     """
-#     Model for digital products that can be streamed
-#     """
-#     name = models.CharField(max_length=255)
-#     description = models.TextField()
-#     price = models.DecimalField(max_digits=10, decimal_places=2)
-#     category = models.ForeignKey('Category', on_delete=models.CASCADE, related_name='digital_products')
-    
-#     # Streaming-specific fields
-#     # Add the S3 object key field
-#     s3_object_key = models.CharField(max_length=255, help_text="S3 object key for the digital content")
-#     thumbnail = models.ImageField(upload_to='digital_product_thumbnails/', null=True, blank=True)
-    
-#     # Metadata
-#     is_active = models.BooleanField(default=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
-
-#     def __str__(self):
-#         return self.name
-    
-#     def get_presigned_url(self, expiration=3600):
-#         """
-#         Generate a pre-signed URL for secure streaming.
-#         """
-
-#         s3_client = boto3.client(
-#             's3',
-#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-#             region_name=settings.AWS_S3_REGION_NAME,
-#         )
-#         return s3_client.generate_presigned_url(
-#             'get_object',
-#             Params={
-#                 'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-#                 'Key': self.s3_object_key,
-#             },
-#             ExpiresIn=expiration
-#         )
 
 class Product(models.Model):
     """
@@ -118,7 +64,7 @@ class Product(models.Model):
     image = models.ImageField(upload_to='upload/products', null=True, blank=True)
     category = models.ForeignKey('Category', on_delete=models.CASCADE)
     product_type = models.CharField(max_length=10, choices=PRODUCT_TYPE_CHOICES, default='physical')
-    
+    stock = models.IntegerField(default=0)
     #Sale stuff
     is_sale = models.BooleanField(default=False)
     sale_price = models.DecimalField(default=0, max_digits=10, decimal_places=2)

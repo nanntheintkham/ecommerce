@@ -35,6 +35,16 @@
             <div class="text-center">
               <!-- Product name-->
               <h5 class="fw-bolder">{{ product.name }}</h5>
+              <!-- Product in-stock-->
+              
+              {% if product.product_type == 'physical' and product.stock == 0 %}
+              <div class="d-flex justify-content-center small text-danger mb-2">
+                <div class="bi-star-fill"></div>
+                &nbsp;&nbsp;Out of stock&nbsp;&nbsp;
+                <div class="bi-star-fill"></div>
+              </div>
+              {% endif %}
+              
               {% if product.is_sale %}
               <!-- Product price-->
               <strike>{{ product.price }} HUF</strike>

@@ -43,23 +43,28 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('s3_object_key',),
             'classes': ('collapse',),  # Makes it collapsible
         }),
+        ('Physical Product Fields', {
+            'fields': ('stock',),
+            'classes': ('collapse',),  # Makes it collapsible
+        }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
         }),
     )
 
     def get_fieldsets(self, request, obj=None):
-        """
-        Dynamically show/hide fields based on product_type.
-        """
         fieldsets = super().get_fieldsets(request, obj)
-        if obj and obj.product_type == 'physical':
-            # Remove Digital Product fields if it's a physical product
-            fieldsets = [fs for fs in fieldsets if 'Digital Product Fields' not in fs[0]]
-        elif obj and obj.product_type == 'digital':
-            # Remove Physical Product fields if it's a digital product
-            fieldsets = [fs for fs in fieldsets if 'Physical Product Fields' not in fs[0]]
+        if obj:
+            if obj.product_type == 'physical':
+                return [
+                    fs for fs in fieldsets if 'Digital Product Fields' not in fs[0]
+                ]
+            elif obj.product_type == 'digital':
+                return [
+                    fs for fs in fieldsets if 'Physical Product Fields' not in fs[0]
+                ]
         return fieldsets
+
 
     def save_model(self, request, obj, form, change):
         """
@@ -67,8 +72,7 @@ class ProductAdmin(admin.ModelAdmin):
         """
         if obj.product_type == 'digital':
             obj.stock = None
-            obj.weight = None
-            obj.dimensions = None
+            
         elif obj.product_type == 'physical':
             obj.s3_object_key = None
             obj.thumbnail = None

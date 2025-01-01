@@ -1,6 +1,6 @@
 {% extends 'store/base.html' %}
 {% load static %}
-
+{% load custom_filters %}
 {% block content %}
 <!-- Header-->
 <header class="bg-dark py-5">
@@ -18,7 +18,7 @@
         <!-- Cart Items Column -->
         <div class="col-lg-8 mb-4">
             {% for product in cart_products %}
-            <div class="card shadow-sm hover-effect mb-4">
+            <div class="card shadow-sm hover-effect mb-4" id="product-card-{{ product.id }}">
                 <div class="row g-0">
                     <div class="col-md-4">
                         <div class="product-image-container">
@@ -51,27 +51,45 @@
                                     <span class="fw-bold">{{ product.price }} HUF</span>
                                     {% endif %}
                                 </div>
-
+                                
                                 <div class="quantity-controls d-flex align-items-center">
                                     <label class="me-2 text-muted">Quantity:</label>
-                                    <select class="form-select form-select-sm" style="width: 70px;" id="select{{product.id}}">
-                                        {% for key, value in quantities.items %}
-                                            {% if key == product.id|slugify %}
-                                                <option selected>{{ value }}</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                    </select>
-                                    <button type="button" data-index="{{product.id}}"
-                                        class="btn btn-outline-dark btn-sm ms-2 update-cart">
-                                        <i class="bi bi-arrow-clockwise"></i>
-                                    </button>
+                                    <div class="input-group">
+                                        <button type="button" class="btn btn-outline-secondary decrement-btn" 
+                                                data-product-id="{{ product.id }}">-</button>
+                                        <input type="number" 
+                                               class="form-control text-center quantity-input"
+                                               data-product-id="{{ product.id }}"
+                                               value="{{ quantities|get_item:product.id }}"
+                                               min="1"
+                                               max="{{ product.stock }}"
+                                               style="width: 80px;">
+                                        <button type="button" class="btn btn-outline-secondary increment-btn"
+                                                data-product-id="{{ product.id }}">+</button>
+                                        <button type="button" 
+                                                class="btn btn-outline-dark update-cart ms-2"
+                                                data-product-id="{{ product.id }}">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                            
+                            {% if product.product_type == 'physical' %}
+                            <div class="stock-info mt-2">
+                                {% if product.stock > 0 %}
+                                    <small class="text-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        In stock ({{ product.stock }} available)
+                                    </small>
+                                {% else %}
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                        Out of stock
+                                    </small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -79,7 +97,7 @@
             {% endfor %}
         </div>
 
-        <!-- Order Summary Column -->
+        <!-- Order Summary Column - remains the same -->
         <div class="col-lg-4">
             <div class="card shadow-sm position-sticky" style="top: 2rem;">
                 <div class="card-header bg-dark text-white py-3">
@@ -130,7 +148,7 @@
         </div>
     </div>
     {% else %}
-    <div class="text-center py-5">
+        <div class="text-center py-5">
         <div class="mb-4">
             <i class="bi bi-cart-x" style="font-size: 4rem;"></i>
         </div>
@@ -143,118 +161,125 @@
     {% endif %}
 </div>
 
-{% endblock %}
-
-{% block head %}
-<style>
-    /* Custom styles for cart page */
-    .hover-effect {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .hover-effect:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .product-image-container {
-        position: relative;
-        height: 100%;
-        min-height: 200px;
-    }
-
-    .sale-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-    }
-
-    .quantity-controls select {
-        border-radius: 4px;
-    }
-
-    .btn-close {
-        transition: opacity 0.3s ease;
-    }
-
-    .btn-close:hover {
-        opacity: 1;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .product-image-container {
-            min-height: 150px;
-        }
-    }
-</style>
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-circle me-2"></i>Error
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Update Cart
-$(document).on('click', '.update-cart', function(e) {
-    e.preventDefault();
-    const btn = $(this);
-    const productid = btn.data('index');
-    const quantity = $('#select' + productid).val();
+$(document).ready(function() {
+    // Function to show error modal
+    function showError(message) {
+        $('#errorMessage').text(message);
+        new bootstrap.Modal($('#errorModal')).show();
+    }
 
-    console.log('Updating cart for product ID:', productid, 'with quantity:', quantity);
-
-    btn.prop('disabled', true);
-    btn.html('<span class="spinner-border spinner-border-sm" role="status"></span>');
-
-    $.ajax({
-        type: 'POST',
-        url: '{% url 'cart_update' %}',
-        data: {
-            product_id: productid,
-            product_qty: quantity,
-            csrfmiddlewaretoken: '{{ csrf_token }}',
-            action: 'post'
-        },
-        success: function(json) {
-            console.log('Cart updated successfully:', json);
-            location.reload();
-        },
-        error: function(xhr, errmsg, err) {
-            console.error('Error updating cart:', xhr.responseText);
-            btn.prop('disabled', false);
-            btn.html('<i class="bi bi-arrow-clockwise"></i>');
-            alert('Failed to update cart. Please try again.');
+    // Increment/Decrement buttons
+    $('.increment-btn, .decrement-btn').click(function() {
+        const productId = $(this).data('product-id');
+        const input = $(`.quantity-input[data-product-id="${productId}"]`);
+        const currentVal = parseInt(input.val());
+        const maxStock = parseInt(input.attr('max'));
+        
+        if ($(this).hasClass('increment-btn')) {
+            if (currentVal < maxStock) {
+                input.val(currentVal + 1);
+            }
+        } else {
+            if (currentVal > 1) {
+                input.val(currentVal - 1);
+            }
         }
     });
-});
 
-// Delete From Cart
-$(document).on('click', '.delete-product', function(e) {
-    e.preventDefault();
-    const btn = $(this);
-    const productid = btn.data('index');
+    // Update Cart
+    $('.update-cart').click(function() {
+        const btn = $(this);
+        const productId = btn.data('product-id');
+        const quantityInput = $(`.quantity-input[data-product-id="${productId}"]`);
+        const quantity = quantityInput.val();
 
-    if (confirm('Are you sure you want to remove this item from your cart?')) {
-        // Show loading state
-        btn.prop('disabled', true);
+        // Disable button and show loading state
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
         $.ajax({
             type: 'POST',
-            url: '{% url 'cart_delete' %}',
+            url: '{% url "cart_update" %}',
             data: {
-                product_id: productid,
+                product_id: productId,
+                product_qty: quantity,
                 csrfmiddlewaretoken: '{{ csrf_token }}',
                 action: 'post'
             },
-            success: function(json) {
-                location.reload();
+            success: function(response) {
+                if (response.error) {
+                    showError(response.error);
+                } else {
+                    location.reload();
+                }
             },
-            error: function(xhr, errmsg, err) {
-                // Reset button state on error
-                btn.prop('disabled', false);
-                alert('Failed to remove item. Please try again.');
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while updating the cart.';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                showError(errorMessage);
+            },
+            complete: function() {
+                // Reset button state
+                btn.prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i>');
             }
         });
-    }
-});
+    });
 
+    // Delete From Cart
+    $('.delete-product').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const productId = btn.data('index');
+
+        if (confirm('Are you sure you want to remove this item from your cart?')) {
+            btn.prop('disabled', true);
+
+            $.ajax({
+                type: 'POST',
+                url: '{% url "cart_delete" %}',
+                data: {
+                    product_id: productId,
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    action: 'post'
+                },
+                success: function(json) {
+                    location.reload();
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Failed to remove item. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    showError(errorMessage);
+                    btn.prop('disabled', false);
+                }
+            });
+        }
+    });
+});
 </script>
 {% endblock %}

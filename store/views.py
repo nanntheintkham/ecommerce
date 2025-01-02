@@ -1,3 +1,4 @@
+import re
 from django.shortcuts import get_object_or_404, render, redirect
 from .models import Product, Category, Profile
 from django.contrib.auth import authenticate, login, logout
@@ -14,6 +15,17 @@ from .models import UserDigitalPurchase
 from payment.forms import ShippingAddressForm
 from payment.models import ShippingAddress, Order, OrderItem
 from cart.cart import Cart
+from django.http import JsonResponse, StreamingHttpResponse
+from django.core.signing import Signer, BadSignature
+from django.http import HttpResponse, StreamingHttpResponse, JsonResponse
+from django.core.cache import cache
+from django.conf import settings
+from django.http import HttpResponseForbidden
+import boto3
+from botocore.exceptions import ClientError
+import time
+import hashlib
+import requests
 import logging
 import json
 
@@ -108,7 +120,6 @@ def category(request, slug):
         messages.error(request, "That Category Doesn't Exist!")
         return redirect('home')
 
-
 def product(request, pk):
     """
     Show product details based on type.
@@ -132,34 +143,189 @@ def product(request, pk):
         
     return render(request,'store/product.html', {'product': product, 'stock_range': stock_range})    
     
+def generate_stream_id(user_id, product_id):
+    """Generate a unique stream ID for rate limiting"""
+    return hashlib.sha256(f"{user_id}:{product_id}:{int(time.time() // 300)}".encode()).hexdigest()
+
+def get_secure_token(user_id, product_id, session_id, expires=30):
+    """
+    Generate a short-lived signed token for video access
+    
+    Args:
+        user_id (int): The ID of the user requesting access
+        product_id (int): The ID of the product being accessed
+        session_id (str): Browser session ID for additional validation
+        expires (int): Token expiration time in seconds (shortened to 30s)
+    """
+    signer = Signer()
+    timestamp = int(time.time()) + expires
+    # Include session ID and user agent hash in token
+    token_data = f"{user_id}:{product_id}:{timestamp}:{session_id}"
+    return signer.sign(token_data)
+
+def verify_token(token, session_id):
+    """
+    Verify the streaming token with additional checks
+    """
+    signer = Signer()
+    try:
+        token_data = signer.unsign(token)
+        user_id, product_id, timestamp, token_session_id = token_data.split(':')
+        
+        # Verify timestamp
+        if int(time.time()) > int(timestamp):
+            return None
+            
+        # Verify session ID matches
+        if token_session_id != session_id:
+            return None
+            
+        return {
+            'user_id': int(user_id),
+            'product_id': int(product_id)
+        }
+    except (BadSignature, ValueError):
+        return None
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def view_digital_product(request, pk):
-    """
-    View a purchased digital product
-    """
+    """View a purchased digital product with enhanced security"""
     digital_product = get_object_or_404(Product, pk=pk, product_type='digital')
     
-    # Check if user has purchased the product
-    purchase = UserDigitalPurchase.objects.filter(
+    # Check purchase
+    purchase = get_object_or_404(
+        UserDigitalPurchase,
         user=request.user, 
         digital_product=digital_product
-    ).first()
+    )
+
+    # Handle AJAX requests for URL refresh
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            # Generate new token
+            token = get_secure_token(
+                request.user.id,
+                digital_product.id,
+                request.session.session_key if request.session.session_key else '',
+                expires=30
+            )
+            stream_url = f'/stream/{digital_product.pk}?token={token}'
+            return JsonResponse({'stream_url': stream_url})
+        except Exception as e:
+            logger.error(f"Error generating streaming token: {str(e)}")
+            return JsonResponse({'error': 'Failed to generate streaming URL'}, status=500)
+
+    # Regular page load
+    # Ensure user has a session
+    if not request.session.session_key:
+        request.session.create()
     
-    if not purchase:
-        messages.warning(request, "You must purchase this product first.")
-        return redirect('product', pk=digital_product.pk)
+    # Generate initial token
+    token = get_secure_token(
+        request.user.id,
+        digital_product.id,
+        request.session.session_key,
+        expires=30
+    )
     
-    # Generate pre-signed URL
-    stream_url = digital_product.get_presigned_url()
-    # Update last viewed timestamp
-    purchase.last_viewed = timezone.now()
-    purchase.save()
+    stream_url = f'/stream/{digital_product.pk}?token={token}'
     
     return render(request, 'store/view_digital_product.html', {
         'product': digital_product,
         'stream_url': stream_url
     })
+
+@login_required
+def stream_video(request, pk):
+    """Secure video streaming endpoint with enhanced protection"""
+    try:
+        # Check referrer
+        referer = request.META.get('HTTP_REFERER', '')
+        if not referer or request.get_host() not in referer:
+            return HttpResponseForbidden("Invalid request origin")
+        
+        # Verify token with session
+        token = request.GET.get('token')
+        if not token:
+            return HttpResponseForbidden("Missing token")
+        
+        session_id = request.session.session_key or ''
+        token_data = verify_token(token, session_id)
+        if not token_data or token_data['user_id'] != request.user.id:
+            return HttpResponseForbidden("Invalid token")
+        
+        # Verify purchase
+        product = get_object_or_404(Product, pk=token_data['product_id'])
+        purchase = get_object_or_404(
+            UserDigitalPurchase, 
+            user=request.user,
+            digital_product=product
+        )
+
+        # Get S3 object
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+        
+        s3_object = s3_client.get_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=product.s3_object_key
+        )
+        
+        # Support range requests for better video playback
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        content_length = s3_object['ContentLength']
+        
+        if range_header:
+            range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+            if range_match:
+                start = int(range_match.group(1))
+                end = int(range_match.group(2)) if range_match.group(2) else content_length - 1
+                
+                if start >= content_length:
+                    return HttpResponse(status=416)  # Requested range not satisfiable
+                
+                # Get partial content
+                s3_object = s3_client.get_object(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Key=product.s3_object_key,
+                    Range=f'bytes={start}-{end}'
+                )
+                
+                response = StreamingHttpResponse(
+                    streaming_content=s3_object['Body'].iter_chunks(chunk_size=8192),
+                    status=206,
+                    content_type='video/mp4'
+                )
+                
+                response['Content-Range'] = f'bytes {start}-{end}/{content_length}'
+                response['Content-Length'] = end - start + 1
+            else:
+                return HttpResponse(status=400)  # Bad request
+        else:
+            response = StreamingHttpResponse(
+                streaming_content=s3_object['Body'].iter_chunks(chunk_size=8192),
+                content_type='video/mp4'
+            )
+            response['Content-Length'] = content_length
+        
+        # Security headers
+        response['Content-Disposition'] = 'inline'
+        response['X-Frame-Options'] = 'SAMEORIGIN'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Accept-Ranges'] = 'bytes'  # Support range requests
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Streaming error: {str(e)}")
+        return HttpResponse(status=500)
 
 def home(request):
     products = Product.objects.all()

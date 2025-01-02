@@ -12,6 +12,7 @@ urlpatterns = [
     path('update_info/', views.update_info, name='update_info'),
     path('product/<int:pk>', views.product, name='product'),
     path('product/<int:pk>/view', views.view_digital_product, name='view_digital_product'),
+    path('stream/<int:pk>', views.stream_video, name='stream_video'),
     path('category/<slug:slug>', views.category, name='category'),
     path('category_summary/', views.category_summary, name='category_summary'),
     path('search/', views.search, name='search'),

@@ -304,6 +304,32 @@
 <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const refreshToken = async () => {
+        try {
+            const response = await fetch(window.location.href, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (!data.stream_url) {
+                throw new Error('No stream URL in response');
+            }
+            
+            return data.stream_url;
+        } catch (error) {
+            console.error('Token refresh error:', error);
+            return null;
+        }
+    };
+
     const player = videojs('streamPlayer', {
         controls: true,
         autoplay: false,
@@ -311,18 +337,13 @@ document.addEventListener('DOMContentLoaded', function() {
         responsive: true,
         fluid: true,
         playbackRates: [0.5, 1, 1.5, 2],
-        controlBar: {
-            children: [
-                'playToggle',
-                'volumePanel',
-                'currentTimeDisplay',
-                'timeDivider',
-                'durationDisplay',
-                'progressControl',
-                'playbackRateMenuButton',
-                'fullscreenToggle',
-            ],
-        },
+        html5: {
+            vhs: {
+                overrideNative: true
+            },
+            nativeAudioTracks: false,
+            nativeVideoTracks: false
+        }
     });
 
     // Handle keyboard shortcuts
@@ -366,14 +387,49 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Quality changed to:', this.value);
     });
 
-    // Add loading indicator
-    player.on('waiting', function() {
-        this.addClass('vjs-loading');
+    // Handle token refresh
+    let refreshInterval = setInterval(async () => {
+        const newUrl = await refreshToken();
+        if (newUrl) {
+            const currentTime = player.currentTime();
+            const wasPlaying = !player.paused();
+            
+            player.src({
+                type: 'video/mp4',
+                src: newUrl
+            });
+            
+            player.one('loadedmetadata', () => {
+                player.currentTime(currentTime);
+                if (wasPlaying) {
+                    player.play().catch(console.error);
+                }
+            });
+        }
+    }, 25000);
+
+    // Cleanup on player disposal
+    player.on('dispose', () => {
+        clearInterval(refreshInterval);
     });
 
-    player.on('canplay', function() {
-        this.removeClass('vjs-loading');
+    // Handle errors
+    player.on('error', async () => {
+        const newUrl = await refreshToken();
+        if (newUrl) {
+            player.src({
+                type: 'video/mp4',
+                src: newUrl
+            });
+            player.play().catch(console.error);
+        }
+    });
+
+    // Prevent right-click on video
+    player.on('contextmenu', function(e) {
+        e.preventDefault();
     });
 });
+
 </script>
 {% endblock %}

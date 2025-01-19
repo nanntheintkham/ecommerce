@@ -3,6 +3,7 @@ from .cart import Cart
 from store.models import Product
 from django.http import JsonResponse
 from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ def cart_summary(request):
 	totals = cart.cart_total()
 	return render(request, "cart/cart_summary.html", {"cart_products": cart_products, "quantities": quantities, "totals": totals})
 
+@csrf_exempt 
 def cart_add(request):
 	# Get the cart
 	cart = Cart(request)

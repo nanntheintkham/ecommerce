@@ -71,7 +71,7 @@ class ProductAdmin(admin.ModelAdmin):
         Custom save logic to ensure correct data for each product type.
         """
         if obj.product_type == 'digital':
-            obj.stock = None
+            obj.stock = 0
             
         elif obj.product_type == 'physical':
             obj.s3_object_key = None

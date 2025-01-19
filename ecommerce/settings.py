@@ -42,7 +42,7 @@ DEFAULT_FROM_EMAIL = 'nanntheint.dev@gmail.com'
 SECRET_KEY = 'django-insecure-3_vyq10@%=g2*pi0^5s_tdu6tfs5a!dlensj*xewnrmh@h_v2f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # settings.py
 AWS_S3_SIGNATURE_VERSION = 's3v4'

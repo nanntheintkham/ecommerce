@@ -206,10 +206,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 AWS_S3_CUSTOM_DOMAIN = 'euphoria-media.s3.amazonaws.com'
 if DEBUG:
     MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 else:
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

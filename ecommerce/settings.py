@@ -226,7 +226,7 @@ else:
         "BACKEND": "django.core.files.storage.FileSystemStorage",
         "BUCKET_NAME": AWS_STORAGE_BUCKET_NAME,
     },
-}
+    }
     
 
 # Default primary key field type

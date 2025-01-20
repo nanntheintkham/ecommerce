@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from . import settings
 from django.conf.urls.static import static
+from storages.backends.s3boto3 import S3Boto3Storage
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -12,4 +13,5 @@ urlpatterns = [
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    bucket = settings.AWS_MEDIA_BUCKET_NAME
+    urlpatterns += static(settings.MEDIA_URL, document_root=S3Boto3Storage().bucket)

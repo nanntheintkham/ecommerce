@@ -214,7 +214,6 @@ AWS_S3_CUSTOM_DOMAIN = 'euphoria-media.s3.amazonaws.com'
 #     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # else:
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 STORAGES = {
 "default": {
@@ -253,3 +252,27 @@ CACHES = {
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'boto3': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'botocore': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}

@@ -14,4 +14,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     bucket = settings.AWS_MEDIA_BUCKET_NAME
-    urlpatterns += static(settings.MEDIA_URL, document_root=S3Boto3Storage().bucket)
+    urlpatterns += static(settings.MEDIA_URL, document_root=S3Boto3Storage())

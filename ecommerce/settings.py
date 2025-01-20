@@ -218,7 +218,7 @@ MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 STORAGES = {
 "default": {
     "BACKEND": "storages.backends.s3.S3Storage",
-    "BUCKET_NAME": AWS_MEDIA_BUCKET_NAME,
+    "BUCKET_NAME": "euphoria-media",
 },
 "staticfiles": {
     "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",

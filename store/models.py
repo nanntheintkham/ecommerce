@@ -3,7 +3,7 @@ from django.utils.text import slugify
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.conf import settings
-from storages.backends.s3boto3 import S3Boto3Storage
+from ecommerce.storage_backends import ImageStorage
 import datetime
 from django.utils import timezone
 import boto3
@@ -62,7 +62,7 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='upload/products/', null=True, blank=True)
+    image = models.ImageField(upload_to='upload/products/', storage=ImageStorage(), null=True, blank=True)
     category = models.ForeignKey('Category', on_delete=models.CASCADE)
     product_type = models.CharField(max_length=10, choices=PRODUCT_TYPE_CHOICES, default='physical')
     stock = models.IntegerField(default=0)

@@ -16,6 +16,7 @@ MY_DB_PASSWORD = os.environ['MY_DB_PASSWORD']
 AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
 AWS_STORAGE_BUCKET_NAME = os.environ['AWS_STORAGE_BUCKET_NAME']
+AWS_MEDIA_BUCKET_NAME = 'euphoria-media'
 AWS_S3_REGION_NAME = os.environ['AWS_S3_REGION_NAME']
 
 # Google auth credentials
@@ -42,7 +43,7 @@ DEFAULT_FROM_EMAIL = 'nanntheint.dev@gmail.com'
 SECRET_KEY = 'django-insecure-3_vyq10@%=g2*pi0^5s_tdu6tfs5a!dlensj*xewnrmh@h_v2f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # settings.py
 AWS_S3_SIGNATURE_VERSION = 's3v4'
@@ -205,28 +206,29 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files storage
 # S3 Static and Media Settings
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
+AWS_DEFAULT_ACL = None
 AWS_S3_CUSTOM_DOMAIN = 'euphoria-media.s3.amazonaws.com'
 
-if DEBUG:
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# if DEBUG:
+#     MEDIA_URL = '/media/'
+#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-else:
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-    STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "BUCKET_NAME": 'euphoria-media',
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-    "videos": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-        "BUCKET_NAME": AWS_STORAGE_BUCKET_NAME,
-    },
-    }
+# else:
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+STORAGES = {
+"default": {
+    "BACKEND": "storages.backends.s3.S3Storage",
+    "BUCKET_NAME": AWS_MEDIA_BUCKET_NAME,
+},
+"staticfiles": {
+    "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+},
+"videos": {
+    "BACKEND": "django.core.files.storage.FileSystemStorage",
+    "BUCKET_NAME": AWS_STORAGE_BUCKET_NAME,
+},
+}
     
 
 # Default primary key field type

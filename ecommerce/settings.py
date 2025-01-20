@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'payment',
     'whitenoise.runserver_nostatic',
     'paypal.standard.ipn',
+    'storages',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',

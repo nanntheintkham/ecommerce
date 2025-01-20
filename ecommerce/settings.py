@@ -222,6 +222,10 @@ else:
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
+    "videos": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BUCKET_NAME": AWS_STORAGE_BUCKET_NAME,
+    },
 }
     
 

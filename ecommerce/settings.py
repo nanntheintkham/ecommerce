@@ -203,6 +203,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files storage
+# S3 Static and Media Settings
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_ADDRESSING_STYLE = 'virtual'
 
 AWS_S3_CUSTOM_DOMAIN = 'euphoria-media.s3.amazonaws.com'
 if DEBUG:

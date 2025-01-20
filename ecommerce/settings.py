@@ -207,6 +207,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'
 AWS_S3_CUSTOM_DOMAIN = 'euphoria-media.s3.amazonaws.com'
+
 if DEBUG:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -216,10 +217,11 @@ else:
     STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
+        "BUCKET_NAME": 'euphoria-media',
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
+    },
 }
     
 
